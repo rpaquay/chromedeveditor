@@ -31,6 +31,7 @@ import 'lib/event_bus.dart';
 import 'lib/exception.dart';
 import 'lib/javascript/js_builder.dart';
 import 'lib/json/json_builder.dart';
+import 'lib/json/manifest_json_builder.dart';
 import 'lib/jobs.dart';
 import 'lib/launch.dart';
 import 'lib/mobile/deploy.dart';
@@ -166,6 +167,7 @@ abstract class Spark
       addBuilder(new JavaScriptBuilder());
     }
     addBuilder(new JsonBuilder());
+    addBuilder(new ManifestJsonBuilder());
 
     return restoreWorkspace().then((_) {
       return restoreLocationManager().then((_) {
