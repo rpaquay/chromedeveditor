@@ -35,8 +35,9 @@ abstract class JsonListener {
 }
 
 class SpanState {
-  List<int> startPositions = <int>[];
-  List<int> endPositions = <int>[];
+  final List<int> startPositions = <int>[];
+  final List<int> endPositions = <int>[];
+  Span lastSpan;
 
   void enter(int position) {
     assert(startPositions.length >= endPositions.length);
@@ -55,7 +56,18 @@ class SpanState {
     assert(startPositions.length >= endPositions.length);
     int start = startPositions.removeLast();
     int end = endPositions.removeLast();
-    return new Span(start, end);
+    var span = new Span(start, end);
+    lastSpan = span;
+    return span;
+  }
+  
+  Span leaveLastSpan(int position) {
+    if (lastSpan == null) {
+      lastSpan = new Span(startPositions.last, endPositions.last);
+    }
+    assert(lastSpan != null);
+    assert(position >= lastSpan.end);
+    return new Span(lastSpan.start, position);
   }
 }
 
@@ -164,12 +176,14 @@ class JsonParser {
     while (position < length) {
       int char = source.codeUnitAt(position);
       switch (char) {
+        // Whitespace characters
         case SPACE:
         case CARRIAGE_RETURN:
         case NEWLINE:
         case TAB:
           position++;
           break;
+        // String literal
         case QUOTE:
           if ((state & ALLOW_STRING_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -177,6 +191,7 @@ class JsonParser {
           spanState.leave(position);
           state |= VALUE_READ_BITS;
           break;
+        // Enter array definition
         case LBRACKET:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -185,6 +200,7 @@ class JsonParser {
           state = STATE_ARRAY_EMPTY;
           position++;
           break;
+        // Enter object definition
         case LBRACE:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -193,6 +209,7 @@ class JsonParser {
           state = STATE_OBJECT_EMPTY;
           position++;
           break;
+        // "null"
         case CHAR_n:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -200,6 +217,7 @@ class JsonParser {
           spanState.leave(position);
           state |= VALUE_READ_BITS;
           break;
+        // "false"
         case CHAR_f:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -207,6 +225,7 @@ class JsonParser {
           spanState.leave(position);
           state |= VALUE_READ_BITS;
           break;
+        // "true"
         case CHAR_t:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -214,25 +233,28 @@ class JsonParser {
           spanState.leave(position);
           state |= VALUE_READ_BITS;
           break;
+        // property name separator
         case COLON:
           if (state != STATE_OBJECT_KEY) fail(position);
-          listener.propertyName(spanState.pop());
+          listener.propertyName(spanState.leaveLastSpan(position));
           state = STATE_OBJECT_COLON;
           position++;
           break;
+        // Array element separator
         case COMMA:
           if (state == STATE_OBJECT_VALUE) {
-            listener.propertyValue(spanState.pop());
+            listener.propertyValue(spanState.leaveLastSpan(position));
             state = STATE_OBJECT_COMMA;
             position++;
           } else if (state == STATE_ARRAY_VALUE) {
-            listener.arrayElement(spanState.pop());
+            listener.arrayElement(spanState.leaveLastSpan(position));
             state = STATE_ARRAY_COMMA;
             position++;
           } else {
             fail(position);
           }
           break;
+        // End of array
         case RBRACKET:
           if (state == STATE_ARRAY_EMPTY) {
             spanState.leave(position);
@@ -249,6 +271,7 @@ class JsonParser {
           state = states.removeLast() | VALUE_READ_BITS;
           position++;
           break;
+        // End of object
         case RBRACE:
           if (state == STATE_OBJECT_EMPTY) {
             spanState.leave(position);
@@ -264,6 +287,7 @@ class JsonParser {
           state = states.removeLast() | VALUE_READ_BITS;
           position++;
           break;
+        // Number
         default:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
           spanState.enter(position);
@@ -273,7 +297,7 @@ class JsonParser {
           break;
       }
     }
-    if (state != STATE_END) fail(position);
+    if (state != STATE_END) fail(position, "Unexpected end of file.");
   }
 
   /**
