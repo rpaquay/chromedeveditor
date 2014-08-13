@@ -21,22 +21,25 @@ class ManifestJsonProperties {
 
 final manifestJsonProperties = new ManifestJsonProperties();
 
-abstract class ErrorEmitter {
-  void emitError(Span span, String message);
+// Abstraction over an error reporting mechanism that understands error
+// spans and messages.
+abstract class ErrorSink {
+  void emitMessage(Span span, String message);
 }
 
-class FileErrorEmitter implements ErrorEmitter {
+// Implement of ErrorSink for a [File] instance.
+class FileErrorSink implements ErrorSink {
   final File file;
   final String contents;
   final String markerType;
   final int markerSeverity;
   List<int> lineOffsets;
 
-  FileErrorEmitter(this.file, this.contents, this.markerType, this.markerSeverity) {
+  FileErrorSink(this.file, this.contents, this.markerType, this.markerSeverity) {
     file.clearMarkers(markerType);
   }
 
-  void emitError(Span span, String message) {
+  void emitMessage(Span span, String message) {
     int lineNum = _calcLineNumber(contents, span.start) + 1;
     file.createMarker(markerType, markerSeverity, message, lineNum, span.start, span.end);
   }
@@ -46,16 +49,16 @@ class FileErrorEmitter implements ErrorEmitter {
    */
   int _calcLineNumber(String source, int position) {
     if (lineOffsets == null)
-      lineOffsets = createLineOffsets(source);
+      lineOffsets = _createLineOffsets(source);
     
     // Binary search
-    int lineNumber = binarySearch(lineOffsets, position);
+    int lineNumber = _binarySearch(lineOffsets, position);
     if (lineNumber < 0)
       lineNumber = (~lineNumber) - 1;
     return lineNumber;
   }
   
-  static int binarySearch(List items, var item) {
+  static int _binarySearch(List items, var item) {
     int cur = 0;
     int max = items.length;
     while (cur <= max) {
@@ -71,7 +74,7 @@ class FileErrorEmitter implements ErrorEmitter {
   }
   
   // TODO(rpaquay): This should be part of [File] maybe?
-  static List<int> createLineOffsets(String source) {
+  static List<int> _createLineOffsets(String source) {
     List<int> result = new List<int>();
     result.add(0);  // first line always starts at offset 0
     
@@ -104,13 +107,14 @@ class ManifestJsonBuilder extends Builder {
   Future _handleFileChange(File file) {
     // TODO(rpaquay): The work below should be performed in an isolate to avoid blocking UI.
     return file.getContents().then((String str) {
-      ErrorEmitter syntaxErrorEmitter = new FileErrorEmitter(file, str, manifestJsonProperties.syntaxMarkerType, manifestJsonProperties.syntaxMarkerSeveruty);
-      ErrorEmitter manifestErrorEmitter = new FileErrorEmitter(file, str, manifestJsonProperties.semanticsMarkerType, manifestJsonProperties.semanticsMarkerSeverity);
+      ErrorSink syntaxErrorEmitter = new FileErrorSink(file, str, manifestJsonProperties.syntaxMarkerType, manifestJsonProperties.syntaxMarkerSeveruty);
+      ErrorSink manifestErrorEmitter = new FileErrorSink(file, str, manifestJsonProperties.semanticsMarkerType, manifestJsonProperties.semanticsMarkerSeverity);
 
       // TODO(rpaquay): Change JsonParser to never throw exception, just report errors and recovers.
       try {
         if (str.trim().isNotEmpty) {
-          JsonParser parser = new JsonParser(str, new _JsonParserListener(file, syntaxErrorEmitter, manifestErrorEmitter));
+          _JsonEntityValidatorListener listener = new _JsonEntityValidatorListener(syntaxErrorEmitter, new RootValidator(manifestErrorEmitter));
+          JsonParser parser = new JsonParser(str, listener);
           parser.parse();
         }
       } on FormatException catch (e) {
@@ -120,76 +124,23 @@ class ManifestJsonBuilder extends Builder {
   }
 }
 
-abstract class Entity {
-  Span span;
-  Entity();
-}
-
-abstract class ValueEntity extends Entity {
-  get value;
-}
-
-class StringEntity extends ValueEntity {
-  String text;
-  StringEntity(Span span, this.text) {
-    this.span = span;
-  }
-
-  get value => this.text;
-}
-
-class NullEntity extends ValueEntity {
-  NullEntity(Span span) {
-    this.span = span;
-  }
-
-  get value => null;
-}
-
-class NumberEntity extends ValueEntity {
-  num number;
-  NumberEntity(Span span, this.number) {
-    this.span = span;
-  }
-
-  get value => this.number;
-}
-
-class BoolEntity extends ValueEntity {
-  bool boolValue;
-  BoolEntity(Span span, this.boolValue) {
-    this.span = span;
-  }
-
-  get value => this.boolValue;
-}
-
-class ArrayEntity extends Entity {
-}
-
-class ObjectEntity extends Entity {
-}
-
-class _JsonParserListener extends JsonListener {
-  final File file;
-  final ErrorEmitter syntaxErrorEmitter;
-  final ErrorEmitter manifestErrorEmitter;
-  final List<Entity> containers = new List<Entity>();
-  final List<Validator> validators = new List<Validator>();
-  Entity currentContainer;
-  Validator currentValidator;
+class _JsonEntityValidatorListener extends JsonListener {
+  final ErrorSink syntaxErrorEmitter;
+  final List<ContainerEntity> containers = new List<ContainerEntity>();
+  final List<StringEntity> keys = new List<StringEntity>();
+  final List<JsonEntityValidator> validators = new List<JsonEntityValidator>();
+  ContainerEntity currentContainer;
+  JsonEntityValidator currentValidator;
   StringEntity key;
-  Entity value;
+  JsonEntity value;
 
-  _JsonParserListener(this.file, this.syntaxErrorEmitter, this.manifestErrorEmitter) {
-    currentValidator = new RootValidator(manifestErrorEmitter); 
-  }
+  _JsonEntityValidatorListener(this.syntaxErrorEmitter, this.currentValidator);
 
   /** Pushes the currently active container (and key, if a [Map]). */
   void pushContainer() {
     if (currentContainer is ObjectEntity) {
       assert(key != null);
-      containers.add(key);
+      keys.add(key);
     }
     containers.add(currentContainer);
   }
@@ -199,7 +150,7 @@ class _JsonParserListener extends JsonListener {
     value = currentContainer;
     currentContainer = containers.removeLast();
     if (currentContainer is ObjectEntity) {
-      key = containers.removeLast();
+      key = keys.removeLast();
     }
   }
   
@@ -300,53 +251,121 @@ class _JsonParserListener extends JsonListener {
   }
 
   void fail(String source, Span span, String message) {
-    syntaxErrorEmitter.emitError(span, message);
+    syntaxErrorEmitter.emitMessage(span, message);
   }
 }
 
-abstract class Validator {
+
+// Abstract base class of all types of json entities that are parsed 
+// and exposed with a [Span].
+abstract class JsonEntity {
+  Span span;
+}
+
+// Abstract base class for simple values.
+abstract class ValueEntity extends JsonEntity {
+  get value;
+}
+
+// Abstract base class for containers (array and object).
+abstract class ContainerEntity extends JsonEntity {
+}
+
+// Entity for string values.
+class StringEntity extends ValueEntity {
+  String text;
+  StringEntity(Span span, this.text) {
+    this.span = span;
+  }
+
+  get value => this.text;
+}
+
+// Entity for "null" literal values.
+class NullEntity extends ValueEntity {
+  NullEntity(Span span) {
+    this.span = span;
+  }
+
+  get value => null;
+}
+
+// Entity for numeric values.
+class NumberEntity extends ValueEntity {
+  num number;
+  NumberEntity(Span span, this.number) {
+    this.span = span;
+  }
+
+  get value => this.number;
+}
+
+// Entity for "true" or "false" literal values.
+class BoolEntity extends ValueEntity {
+  bool boolValue;
+  BoolEntity(Span span, this.boolValue) {
+    this.span = span;
+  }
+
+  get value => this.boolValue;
+}
+
+// Entity for array values.
+class ArrayEntity extends ContainerEntity {
+}
+
+// Entity for object values.
+class ObjectEntity extends ContainerEntity {
+}
+
+// Event based interface of a json validator.
+abstract class JsonEntityValidator {
   // Invoked when entering an array
-  Validator enterArray();
+  JsonEntityValidator enterArray();
   // Invoked when leaving an array
   void leaveArray(ArrayEntity array);
   // Invoked after parsing an array value
-  void arrayElement(Entity element);
+  void arrayElement(JsonEntity element);
 
   // Invoked when entering an object
-  Validator enterObject();
+  JsonEntityValidator enterObject();
   // Invoked when leaving an object
   void leaveObject(ObjectEntity object);
   // Invoked after parsing an property name inside an object
-  Validator propertyName(StringEntity name);
+  JsonEntityValidator propertyName(StringEntity name);
   // Invoked after parsing a propery value inside an object
-  void propertyValue(Entity value);
+  void propertyValue(JsonEntity value);
 }
 
-class NullValidator implements Validator {
+// No-op base implementation of a [Validator]. 
+class NullValidator implements JsonEntityValidator {
   static final instance = new NullValidator();
-  Validator enterArray() { return instance; }
+  JsonEntityValidator enterArray() { return instance; }
   void leaveArray(ArrayEntity array) {}
-  void arrayElement(Entity element) {}
+  void arrayElement(JsonEntity element) {}
 
-  Validator enterObject() { return instance; }
+  JsonEntityValidator enterObject() { return instance; }
   void leaveObject(ObjectEntity object) {}
-  Validator propertyName(StringEntity name) { return instance; }
-  void propertyValue(Entity value) {}
+  JsonEntityValidator propertyName(StringEntity name) { return instance; }
+  void propertyValue(JsonEntity value) {}
 }
 
+// Initial validator for manifest.json contents.
 class RootValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   RootValidator(this.errorEmitter);
 
-  Validator enterObject() {
+  JsonEntityValidator enterObject() {
     return new TopLevelValidator(errorEmitter);
   }
 }
 
-//
+/////////////////////////////////////////////////////////////////////////////
 // The code below should be auto-generated from a manifest schema definition.
 //
+
+// Validator for the top -level object a manifest.json
 class TopLevelValidator extends NullValidator {
   // from https://developer.chrome.com/extensions/manifest
   static final List<String> known_properties = [
@@ -443,16 +462,16 @@ class TopLevelValidator extends NullValidator {
   
   static final Set<String> allProperties = known_properties.toSet().union(known_properties_apps.toSet());
 
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   TopLevelValidator(this.errorEmitter);
 
-  Validator propertyName(StringEntity name) {
+  JsonEntityValidator propertyName(StringEntity name) {
     if (!allProperties.contains(name.text)) {
       // TODO(rpaquay): Adding the list of known property names currently makes the error tooltip too big and messes up the UI.
-      //String message = "Top level property \"${name.text}\" is not recognized. Known property names are [" + allProperties.join(", ") + "]");
-      String message = "Top level property \"${name.text}\" is not recognized.";
-      errorEmitter.emitError(name.span, message);
+      //String message = "Property \"${name.text}\" is not recognized. Known property names are [" + allProperties.join(", ") + "]");
+      String message = "Property \"${name.text}\" is not recognized.";
+      errorEmitter.emitMessage(name.span, message);
     }
     
     switch(name.text) {
@@ -466,44 +485,37 @@ class TopLevelValidator extends NullValidator {
   }
 }
 
+// Validator for the "manifest_version" element
 class ManifestVersionValidator extends NullValidator {
   static final String message = "Manifest version must be the integer value 1 or 2.";
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   ManifestVersionValidator(this.errorEmitter);
 
-  void leaveObject(ObjectEntity entity) {
-    errorEmitter.emitError(entity.span, message);
-  }
-  
-  void leaveArray(ArrayEntity entity) {
-    errorEmitter.emitError(entity.span, message);
-  }
-
-  void propertyValue(Entity value) {
+  void propertyValue(JsonEntity value) {
     if (value is! NumberEntity) {
-      errorEmitter.emitError(value.span, message);
+      errorEmitter.emitMessage(value.span, message);
       return;
     }
     NumberEntity numEntity = value as NumberEntity;
     if (numEntity.number is! int) {
-      errorEmitter.emitError(value.span, message);   
+      errorEmitter.emitMessage(value.span, message);   
       return;
     }
-    
     if (numEntity.number < 1 || numEntity.number > 2) {
-      errorEmitter.emitError(value.span, message);   
+      errorEmitter.emitMessage(value.span, message);   
       return;
     }
   }
 }
 
+// Validator for the "app" element
 class AppValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   AppValidator(this.errorEmitter);
 
-  Validator propertyName(StringEntity name) {
+  JsonEntityValidator propertyName(StringEntity name) {
     switch(name.text) {
       case "background":
         return new ObjectPropertyValidator(errorEmitter, name.text, new AppBackgroundValidator(errorEmitter));
@@ -511,70 +523,83 @@ class AppValidator extends NullValidator {
         return NullValidator.instance;
       default:
         String message = "Property \"${name.text}\" is not recognized.";
-        errorEmitter.emitError(name.span, message);
+        errorEmitter.emitMessage(name.span, message);
         return NullValidator.instance;
     }
   }
 }
 
+// Validator for the "app.background" element
 class AppBackgroundValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   AppBackgroundValidator(this.errorEmitter);
 
-  Validator propertyName(StringEntity name) {
+  JsonEntityValidator propertyName(StringEntity name) {
     switch(name.text) {
       case "scripts":
         return new ArrayPropertyValidator(errorEmitter, name.text, new StringArrayValidator(errorEmitter));
       default:
         String message = "Property \"${name.text}\" is not recognized.";
-        errorEmitter.emitError(name.span, message);
+        errorEmitter.emitMessage(name.span, message);
         return NullValidator.instance;
     }
   }
 }
 
+// Validate that every element of an array is a string value.
 class StringArrayValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
 
   StringArrayValidator(this.errorEmitter);
   
-  void arrayElement(Entity value) {
+  void arrayElement(JsonEntity value) {
     if (value is! StringEntity) {
-      errorEmitter.emitError(value.span, "String value expected");
+      errorEmitter.emitMessage(value.span, "String value expected");
     }
   }
 }
 
+// Validates a property value is an object, and use [objectValidator] for
+// validating the contents of the object.
 class ObjectPropertyValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
   final String name;
-  final Validator objectValidator;
+  final JsonEntityValidator objectValidator;
 
   ObjectPropertyValidator(this.errorEmitter, this.name, this.objectValidator);
 
-  void propertyValue(Entity entity) {
+  // This is called when we are done parsing the whole property value,
+  // i.e. just before leaving this validator.
+  void propertyValue(JsonEntity entity) {
     if (entity is! ObjectEntity) {
-      errorEmitter.emitError(entity.span, "Property ${name} is expected to be an object.");
+      errorEmitter.emitMessage(entity.span, "Property \"${name}\" is expected to be an object.");
     }
   }
   
-  Validator enterObject() {
+  JsonEntityValidator enterObject() {
     return this.objectValidator;
   }
 }
 
+// Validates a property value is an array, and use [arrayValidator] for 
+// validating the contents (i.e. elements) of the array.
 class ArrayPropertyValidator extends NullValidator {
-  final ErrorEmitter errorEmitter;
+  final ErrorSink errorEmitter;
   final String name;
-  final Validator arrayValidator;
+  final JsonEntityValidator arrayValidator;
 
   ArrayPropertyValidator(this.errorEmitter, this.name, this.arrayValidator);
 
-  void leaveObject(ObjectEntity entity) {
-    errorEmitter.emitError(entity.span, "Array expected.");
+  // This is called when we are done parsing the whole property value,
+  // i.e. just before leaving this validator.
+  void propertyValue(JsonEntity entity) {
+    if (entity is! ArrayEntity) {
+      errorEmitter.emitMessage(entity.span, "Property \"${name}\" is expected to be an array.");
+    }
   }
-  Validator enterArray() {
+  
+  JsonEntityValidator enterArray() {
     return this.arrayValidator;
   }
 }
