@@ -147,85 +147,117 @@ class _JsonParserListener extends JsonListener {
   final File file;
   final ErrorEmitter syntaxErrorEmitter;
   final ErrorEmitter manifestErrorEmitter;
-  List<Entity> entities = new List<Entity>();
-  List<Validator> validators = new List<Validator>();
+  final List<Entity> containers = new List<Entity>();
+  final List<Validator> validators = new List<Validator>();
+  Entity currentContainer;
+  Validator currentValidator;
+  StringEntity key;
+  Entity value;
 
   _JsonParserListener(this.file, this.syntaxErrorEmitter, this.manifestErrorEmitter) {
-    validators.add(new RootValidator(manifestErrorEmitter));
+    currentValidator = new RootValidator(manifestErrorEmitter); 
   }
 
-  Validator get currentValidator => validators.last;
-  Entity get currentEntity => entities.last;
+  /** Pushes the currently active container (and key, if a [Map]). */
+  void pushContainer() {
+    if (currentContainer is ObjectEntity) {
+      assert(key != null);
+      containers.add(key);
+    }
+    containers.add(currentContainer);
+    validators.add(currentValidator);
+  }
 
+  /** Pops the top container from the [stack], including a key if applicable. */
+  void popContainer() {
+    value = currentContainer;
+    currentContainer = containers.removeLast();
+    if (currentContainer is ObjectEntity) {
+      key = containers.removeLast();
+    }
+    currentValidator = validators.removeLast();
+  }
+  
   void handleString(Span span, String value) {
-    entities.add(new StringEntity(span, value));
+    this.value = new StringEntity(span, value);
   }
   void handleNumber(Span span, num value) {
-    entities.add(new NumberEntity(span, value));
+    this.value = new NumberEntity(span, value);
   }
   void handleBool(Span span, bool value) {
-    entities.add(new BoolEntity(span, value));
+    this.value = new BoolEntity(span, value);
   }
   void handleNull(Span span) {
-    entities.add(new NullEntity(span));
-  }
-
-  // Called when the ":" is parsed.
-  // Invariants: current entity is a string and parent entity a an object
-  void propertyName(Span span) {
-    StringEntity name = entities.removeLast();
-    assert(entities.last is ObjectEntity);
-    currentValidator.propertyName(name);
-  }
-
-  // Called when the value after ":" is parsed.
-  // Invariants: current entity is the property value and the parent is an EntityObject.
-  void propertyValue(Span span) {
-    Entity value = entities.removeLast();
-    assert(entities.last is ObjectEntity);
-    currentValidator.propertyValue(value);
+    this.value = new NullEntity(span);
   }
 
   // Called when the opening "{" of an object is parsed.
   void beginObject(int position) {
-    entities.add(new ObjectEntity());
-    Validator validator = currentValidator.enterObject();
-    validators.add(validator);
+    assert(currentValidator != null);
+    pushContainer();
+    currentContainer = new ObjectEntity();
+    currentValidator = currentValidator.enterObject();
   }
 
   // Called when the closing "}" of an object is parsed.
-  // Invariants: current entity is the ObjectEntity.
   void endObject(Span span) {
-    ObjectEntity object = entities.removeLast();
-    assert(object is ObjectEntity);
-    object.span = span;
-    currentValidator.leaveObject(object);
-    validators.removeLast();
+    assert(currentValidator != null);
+    assert(currentContainer != null);
+    assert(currentContainer is ObjectEntity);
+    currentContainer.span = span;
+    currentValidator.leaveObject(currentContainer);
+    popContainer();
   }
 
-  // Called when the "[" of an array is parsed.
+  // Called when the opening "[" of an array is parsed.
   void beginArray(int position) {
-    entities.add(new ArrayEntity());
-    Validator validator = currentValidator.enterArray();
-    validators.add(validator);
+    assert(currentValidator != null);
+    pushContainer();
+    currentContainer = new ArrayEntity();
+    currentValidator = currentValidator.enterArray();
   }
 
-  // Called when the "]" of an array is parsed.
-  // Invariants: current entity is the array entity.
+  // Called when the closing "]" of an array is parsed.
   void endArray(Span span) {
-    ArrayEntity array = entities.removeLast();
-    assert(array is ArrayEntity);
-    array.span = span;
-    currentValidator.leaveArray(array);
-    validators.removeLast();
+    assert(currentValidator != null);
+    assert(currentContainer != null);
+    assert(currentContainer is ArrayEntity);
+    currentContainer.span = span;
+    currentValidator.leaveArray(currentContainer);
+    popContainer();
+  }
+
+  // Called when a ":" is parsed inside an object.
+  void propertyName(Span span) {
+    assert(currentValidator != null);
+    assert(currentContainer != null);
+    assert(currentContainer is ObjectEntity);
+    assert(value != null);
+    assert(value is StringEntity);
+    key = value;
+    value = null;
+    currentValidator.propertyName(key);
+  }
+
+  // Called when a "," or "}" is parsed inside an object.
+  void propertyValue(Span span) {
+    assert(currentValidator != null);
+    assert(currentContainer != null);
+    assert(currentContainer is ObjectEntity);
+    assert(value != null);
+    currentValidator.propertyValue(value);
+    key = value = null;
   }
 
   // Called when the "," after an array element is parsed.
   // Invariants: current entity is the array element, the parent is an ArrayObject.
   void arrayElement(Span span) {
-    Entity value = entities.removeLast();
-    assert(entities.last is ArrayEntity);
+    assert(currentValidator != null);
+    assert(currentContainer != null);
+    assert(currentContainer is ArrayEntity);
+    assert(value != null);
     currentValidator.arrayElement(value);
+    value = null;
   }
 
   void fail(String source, Span span, String message) {
@@ -273,7 +305,101 @@ class RootValidator extends NullValidator {
 // The code below should be auto-generated from a manifest schema definition.
 //
 class TopLevelValidator extends NullValidator {
-  final List<String> known_properties = ["manifest_version", "version"];
+  // from https://developer.chrome.com/extensions/manifest
+  static final List<String> known_properties = [
+    "manifest_version",
+    "name",
+    "version",
+    "default_locale",
+    "description",
+    "icons",
+    "browser_action",
+    "page_action",
+    "author",
+    "automation",
+    "background",
+    "background_page",
+    "chrome_settings_overrides",
+    "chrome_ui_overrides",
+    "chrome_url_overrides",
+    "commands",
+    "content_pack",
+    "content_scripts",
+    "content_security_policy",
+    "converted_from_user_script",
+    "current_locale",
+    "devtools_page",
+    "externally_connectable",
+    "file_browser_handlers",
+    "homepage_url",
+    "import",
+    "incognito",
+    "input_components",
+    "key",
+    "minimum_chrome_version",
+    "nacl_modules",
+    "oauth2",
+    "offline_enabled",
+    "omnibox",
+    "optional_permissions",
+    "options_page",
+    "page_actions",
+    "permissions",
+    "platforms",
+    "plugins",
+    "requirements",
+    "sandbox",
+    "script_badge",
+    "short_name",
+    "signature",
+    "spellcheck",
+    "storage",
+    "system_indicator",
+    "tts_engine",
+    "update_url",
+    "web_accessible_resources",
+    ];
+  
+  // from https://developer.chrome.com/apps/manifest
+  static final List<String> known_properties_apps = [
+    "app",                                              
+    "manifest_version",
+    "name",
+    "version",
+    "default_locale",
+    "description",
+    "icons",
+    "author",
+    "bluetooth",
+    "commands",
+    "current_locale",
+    "externally_connectable",
+    "file_handlers",
+    "import",
+    "key",
+    "kiosk_enabled",
+    "kiosk_only",
+    "minimum_chrome_version",
+    "nacl_modules",
+    "oauth2",
+    "offline_enabled",
+    "optional_permissions",
+    "permissions",
+    "platforms",
+    "requirements",
+    "sandbox",
+    "short_name",
+    "signature",
+    "sockets",
+    "storage",
+    "system_indicator",
+    "update_url",
+    "url_handlers",
+    "webview",
+    ];
+  
+  static final Set<String> allProperties = known_properties.toSet().union(known_properties_apps.toSet());
+
   final ErrorEmitter errorEmitter;
 
   TopLevelValidator(this.errorEmitter);
@@ -281,13 +407,17 @@ class TopLevelValidator extends NullValidator {
   Validator enterObject() {
     return new NullValidator();
   }
+  
   Validator enterArray() {
     return new NullValidator();
   }
 
   void propertyName(StringEntity name) {
-    if (!known_properties.contains(name.text)) {
-      errorEmitter.emitError(name.span, "Top level property \"" + name.text +"\" is not recognized. Known property names are [" + known_properties.join(", ") + "]");
+    if (!allProperties.contains(name.text)) {
+      // TODO(rpaquay): Adding the list of known property names currently makes the error tooltip too big and messes up the UI.
+      //String message = "Top level property \"${name.text}\" is not recognized. Known property names are [" + allProperties.join(", ") + "]");
+      String message = "Top level property \"${name.text}\" is not recognized.";
+      errorEmitter.emitError(name.span, message);
     }
   }
 }
