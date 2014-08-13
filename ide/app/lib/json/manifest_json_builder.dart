@@ -458,6 +458,8 @@ class TopLevelValidator extends NullValidator {
     switch(name.text) {
       case "manifest_version":
         return new ManifestVersionValidator(errorEmitter);
+      case "app":
+        return new ObjectPropertyValidator(errorEmitter, name.text, new AppValidator(errorEmitter));
       default:
         return NullValidator.instance;
     }
@@ -493,5 +495,86 @@ class ManifestVersionValidator extends NullValidator {
       errorEmitter.emitError(value.span, message);   
       return;
     }
+  }
+}
+
+class AppValidator extends NullValidator {
+  final ErrorEmitter errorEmitter;
+
+  AppValidator(this.errorEmitter);
+
+  Validator propertyName(StringEntity name) {
+    switch(name.text) {
+      case "background":
+        return new ObjectPropertyValidator(errorEmitter, name.text, new AppBackgroundValidator(errorEmitter));
+      case "service_worker":
+        return NullValidator.instance;
+      default:
+        String message = "Property \"${name.text}\" is not recognized.";
+        errorEmitter.emitError(name.span, message);
+        return NullValidator.instance;
+    }
+  }
+}
+
+class AppBackgroundValidator extends NullValidator {
+  final ErrorEmitter errorEmitter;
+
+  AppBackgroundValidator(this.errorEmitter);
+
+  Validator propertyName(StringEntity name) {
+    switch(name.text) {
+      case "scripts":
+        return new ArrayPropertyValidator(errorEmitter, name.text, new StringArrayValidator(errorEmitter));
+      default:
+        String message = "Property \"${name.text}\" is not recognized.";
+        errorEmitter.emitError(name.span, message);
+        return NullValidator.instance;
+    }
+  }
+}
+
+class StringArrayValidator extends NullValidator {
+  final ErrorEmitter errorEmitter;
+
+  StringArrayValidator(this.errorEmitter);
+  
+  void arrayElement(Entity value) {
+    if (value is! StringEntity) {
+      errorEmitter.emitError(value.span, "String value expected");
+    }
+  }
+}
+
+class ObjectPropertyValidator extends NullValidator {
+  final ErrorEmitter errorEmitter;
+  final String name;
+  final Validator objectValidator;
+
+  ObjectPropertyValidator(this.errorEmitter, this.name, this.objectValidator);
+
+  void propertyValue(Entity entity) {
+    if (entity is! ObjectEntity) {
+      errorEmitter.emitError(entity.span, "Property ${name} is expected to be an object.");
+    }
+  }
+  
+  Validator enterObject() {
+    return this.objectValidator;
+  }
+}
+
+class ArrayPropertyValidator extends NullValidator {
+  final ErrorEmitter errorEmitter;
+  final String name;
+  final Validator arrayValidator;
+
+  ArrayPropertyValidator(this.errorEmitter, this.name, this.arrayValidator);
+
+  void leaveObject(ObjectEntity entity) {
+    errorEmitter.emitError(entity.span, "Array expected.");
+  }
+  Validator enterArray() {
+    return this.arrayValidator;
   }
 }
