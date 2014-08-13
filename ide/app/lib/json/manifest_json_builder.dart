@@ -10,7 +10,6 @@ import 'json_parser.dart';
 import '../builder.dart';
 import '../jobs.dart';
 import '../workspace.dart';
-import '../package_mgmt/bower_properties.dart';
 
 class ManifestJsonProperties {
   final String fileName = "manifest.json";
@@ -31,13 +30,14 @@ class FileErrorEmitter implements ErrorEmitter {
   final String contents;
   final String markerType;
   final int markerSeverity;
+  List<int> lineOffsets;
 
   FileErrorEmitter(this.file, this.contents, this.markerType, this.markerSeverity) {
     file.clearMarkers(markerType);
   }
 
   void emitError(Span span, String message) {
-    int lineNum = _calcLineNumber(contents, span.start);
+    int lineNum = _calcLineNumber(contents, span.start) + 1;
     file.createMarker(markerType, markerSeverity, message, lineNum, span.start, span.end);
   }
 
@@ -45,16 +45,43 @@ class FileErrorEmitter implements ErrorEmitter {
    * Count the newlines between 0 and position.
    */
   int _calcLineNumber(String source, int position) {
-    // TODO(rpaquay): This is O(n), it could be made O(log n) with a binary search in a sorted array.
-    int lineCount = 0;
-
+    if (lineOffsets == null)
+      lineOffsets = createLineOffsets(source);
+    
+    // Binary search
+    int lineNumber = binarySearch(lineOffsets, position);
+    if (lineNumber < 0)
+      lineNumber = (~lineNumber) - 1;
+    return lineNumber;
+  }
+  
+  static int binarySearch(List items, var item) {
+    int cur = 0;
+    int max = items.length;
+    while (cur <= max) {
+      int med = (cur + max) ~/ 2;
+      if (items[med] < item)
+        cur = med + 1;
+      else if (items[med] > item)
+        max = med - 1;
+      else
+        return med;
+    }
+    return ~cur;
+  }
+  
+  // TODO(rpaquay): This should be part of [File] maybe?
+  static List<int> createLineOffsets(String source) {
+    List<int> result = new List<int>();
+    result.add(0);  // first line always starts at offset 0
+    
     for (int index = 0; index < source.length; index++) {
       // TODO(rpaquay): There are other characters to consider as "end of line".
-      if (source[index] == '\n') lineCount++;
-      if (index == position) return lineCount + 1;
+      if (source[index] == '\n') {
+        result.add(index + 1);
+      }
     }
-
-    return lineCount;
+    return result;
   }
 }
 
@@ -165,7 +192,6 @@ class _JsonParserListener extends JsonListener {
       containers.add(key);
     }
     containers.add(currentContainer);
-    validators.add(currentValidator);
   }
 
   /** Pops the top container from the [stack], including a key if applicable. */
@@ -175,6 +201,13 @@ class _JsonParserListener extends JsonListener {
     if (currentContainer is ObjectEntity) {
       key = containers.removeLast();
     }
+  }
+  
+  void pushValidator() {
+    validators.add(currentValidator);
+  }
+
+  void popValidator() {
     currentValidator = validators.removeLast();
   }
   
@@ -195,6 +228,7 @@ class _JsonParserListener extends JsonListener {
   void beginObject(int position) {
     assert(currentValidator != null);
     pushContainer();
+    pushValidator();
     currentContainer = new ObjectEntity();
     currentValidator = currentValidator.enterObject();
   }
@@ -207,12 +241,14 @@ class _JsonParserListener extends JsonListener {
     currentContainer.span = span;
     currentValidator.leaveObject(currentContainer);
     popContainer();
+    popValidator();
   }
 
   // Called when the opening "[" of an array is parsed.
   void beginArray(int position) {
     assert(currentValidator != null);
     pushContainer();
+    pushValidator();
     currentContainer = new ArrayEntity();
     currentValidator = currentValidator.enterArray();
   }
@@ -225,6 +261,7 @@ class _JsonParserListener extends JsonListener {
     currentContainer.span = span;
     currentValidator.leaveArray(currentContainer);
     popContainer();
+    popValidator();
   }
 
   // Called when a ":" is parsed inside an object.
@@ -236,7 +273,8 @@ class _JsonParserListener extends JsonListener {
     assert(value is StringEntity);
     key = value;
     value = null;
-    currentValidator.propertyName(key);
+    pushValidator();
+    currentValidator = currentValidator.propertyName(key);
   }
 
   // Called when a "," or "}" is parsed inside an object.
@@ -246,6 +284,7 @@ class _JsonParserListener extends JsonListener {
     assert(currentContainer is ObjectEntity);
     assert(value != null);
     currentValidator.propertyValue(value);
+    popValidator();
     key = value = null;
   }
 
@@ -266,28 +305,32 @@ class _JsonParserListener extends JsonListener {
 }
 
 abstract class Validator {
+  // Invoked when entering an array
   Validator enterArray();
+  // Invoked when leaving an array
   void leaveArray(ArrayEntity array);
+  // Invoked after parsing an array value
   void arrayElement(Entity element);
 
+  // Invoked when entering an object
   Validator enterObject();
+  // Invoked when leaving an object
   void leaveObject(ObjectEntity object);
-  void propertyName(StringEntity name);
+  // Invoked after parsing an property name inside an object
+  Validator propertyName(StringEntity name);
+  // Invoked after parsing a propery value inside an object
   void propertyValue(Entity value);
 }
 
 class NullValidator implements Validator {
-  Validator enterArray() {
-    return this;
-  }
+  static final instance = new NullValidator();
+  Validator enterArray() { return instance; }
   void leaveArray(ArrayEntity array) {}
   void arrayElement(Entity element) {}
 
-  Validator enterObject() {
-    return this;
-  }
+  Validator enterObject() { return instance; }
   void leaveObject(ObjectEntity object) {}
-  void propertyName(StringEntity name) {}
+  Validator propertyName(StringEntity name) { return instance; }
   void propertyValue(Entity value) {}
 }
 
@@ -404,20 +447,51 @@ class TopLevelValidator extends NullValidator {
 
   TopLevelValidator(this.errorEmitter);
 
-  Validator enterObject() {
-    return new NullValidator();
-  }
-  
-  Validator enterArray() {
-    return new NullValidator();
-  }
-
-  void propertyName(StringEntity name) {
+  Validator propertyName(StringEntity name) {
     if (!allProperties.contains(name.text)) {
       // TODO(rpaquay): Adding the list of known property names currently makes the error tooltip too big and messes up the UI.
       //String message = "Top level property \"${name.text}\" is not recognized. Known property names are [" + allProperties.join(", ") + "]");
       String message = "Top level property \"${name.text}\" is not recognized.";
       errorEmitter.emitError(name.span, message);
+    }
+    
+    switch(name.text) {
+      case "manifest_version":
+        return new ManifestVersionValidator(errorEmitter);
+      default:
+        return NullValidator.instance;
+    }
+  }
+}
+
+class ManifestVersionValidator extends NullValidator {
+  static final String message = "Manifest version must be the integer value 1 or 2.";
+  final ErrorEmitter errorEmitter;
+
+  ManifestVersionValidator(this.errorEmitter);
+
+  void leaveObject(ObjectEntity entity) {
+    errorEmitter.emitError(entity.span, message);
+  }
+  
+  void leaveArray(ArrayEntity entity) {
+    errorEmitter.emitError(entity.span, message);
+  }
+
+  void propertyValue(Entity value) {
+    if (value is! NumberEntity) {
+      errorEmitter.emitError(value.span, message);
+      return;
+    }
+    NumberEntity numEntity = value as NumberEntity;
+    if (numEntity.number is! int) {
+      errorEmitter.emitError(value.span, message);   
+      return;
+    }
+    
+    if (numEntity.number < 1 || numEntity.number > 2) {
+      errorEmitter.emitError(value.span, message);   
+      return;
     }
   }
 }
