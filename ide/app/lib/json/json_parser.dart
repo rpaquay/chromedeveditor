@@ -202,35 +202,35 @@ class JsonParser {
           break;
         // End of object
         case RBRACE:
-          position++;  // Skip the brace
           if (state == STATE_OBJECT_EMPTY) {
-            _spans.leaveContainer(position);
+            _spans.leaveContainer(position + 1);
             listener.endObject(_spans.getLastSpan());
           } else if (state == STATE_OBJECT_VALUE) {
             listener.propertyValue(_spans.getLastSpan());
-            _spans.leaveContainer(position);
+            _spans.leaveContainer(position + 1);
             listener.endObject(_spans.getLastSpan());
           } else {
-            _spans.leaveContainer(position);
-            failSpan(_spans.getLastSpan());
+            fail(position);
+            _spans.leaveContainer(position + 1);
           }
           state = states.removeLast() | VALUE_READ_BITS;
+          position++;
           break;
         // End of array
         case RBRACKET:
-          position++;  // Skip the bracket
           if (state == STATE_ARRAY_EMPTY) {
-            _spans.leaveContainer(position);
+            _spans.leaveContainer(position + 1);
             listener.endArray(_spans.getLastSpan());
           } else if (state == STATE_ARRAY_VALUE) {
             listener.arrayElement(_spans.getLastSpan());
-            _spans.leaveContainer(position);
+            _spans.leaveContainer(position + 1);
             listener.endArray(_spans.getLastSpan());
           } else {
-            _spans.leaveContainer(position);
-            failSpan(_spans.getLastSpan());
+            fail(position);
+            _spans.leaveContainer(position + 1);
           }
           state = states.removeLast() | VALUE_READ_BITS;
+          position++;  // Skip the bracket
           break;
         // property name separator
         case COLON:
