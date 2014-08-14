@@ -355,7 +355,7 @@ class JsonParser {
       }
       char = source.codeUnitAt(position);
       if (char == QUOTE) {
-        listener.handleString(new Span(start, position), source.substring(start, position));
+        listener.handleString(new Span(start - 1, position + 1), source.substring(start, position));
         return position + 1;
       }
       if (char < SPACE) {
@@ -428,7 +428,7 @@ class JsonParser {
           if (start < firstEscape) {
             result = "${source.substring(start, firstEscape)}$result";
           }
-          listener.handleString(new Span(start, position), result);
+          listener.handleString(new Span(start - 1, position + 1), result);
           return position + 1;
         }
         if (char < SPACE) {
