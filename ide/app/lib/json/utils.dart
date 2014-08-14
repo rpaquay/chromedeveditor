@@ -25,17 +25,17 @@ class StringLineOffsets {
     if (lineNumber < lineOffsets.length) {
       columnNumber = position - lineOffsets[lineNumber];
     }
-    
+
     return new LineColumn(lineNumber + 1, columnNumber + 1);
   }
-  
+
   /**
    * Count the newlines between 0 and position.
    */
   int _calcLineNumber(int position) {
    if (lineOffsets == null)
      lineOffsets = _createLineOffsets(contents);
-   
+
    // Binary search
    int lineNumber = _binarySearch(lineOffsets, position);
    if (lineNumber < 0)
@@ -45,7 +45,7 @@ class StringLineOffsets {
 
   static int _binarySearch(List items, var item) {
    int cur = 0;
-   int max = items.length;
+   int max = items.length - 1;
    while (cur <= max) {
      int med = (cur + max) ~/ 2;
      if (items[med] < item)
