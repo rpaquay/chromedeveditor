@@ -4,10 +4,6 @@
 
 library spark.utils;
 
-import 'json_parser.dart';
-import 'json_validator.dart';
-import '../workspace.dart';
-
 // Representation of a (Line, Column) pair, both 1-based.
 class LineColumn {
   final int line;
@@ -73,23 +69,5 @@ class StringLineOffsets {
      }
    }
    return result;
-  }
-}
-
-// Implement of ErrorSink for a [File] instance.
-class FileErrorSink implements ErrorSink {
-  final File file;
-  final String markerType;
-  final int markerSeverity;
-  /*final*/ StringLineOffsets lineOffsets;
-
-  FileErrorSink(this.file, String contents, this.markerType, this.markerSeverity) {
-    this.lineOffsets = new StringLineOffsets(contents);    
-    file.clearMarkers(markerType);
-  }
-
-  void emitMessage(Span span, String message) {
-    LineColumn startPos = lineOffsets.getLineColumn(span.start);
-    file.createMarker(markerType, markerSeverity, message, startPos.line, span.start, span.end);
   }
 }
