@@ -41,7 +41,7 @@ class JsonEntityValidatorListener extends JsonListener {
       key = keys.removeLast();
     }
   }
-  
+
   void pushValidator() {
     validators.add(currentValidator);
   }
@@ -49,18 +49,22 @@ class JsonEntityValidatorListener extends JsonListener {
   void popValidator() {
     currentValidator = validators.removeLast();
   }
-  
+
   void handleString(Span span, String value) {
     this.value = new StringEntity(span, value);
+    currentValidator.handleValue(this.value);
   }
   void handleNumber(Span span, num value) {
     this.value = new NumberEntity(span, value);
+    currentValidator.handleValue(this.value);
   }
   void handleBool(Span span, bool value) {
     this.value = new BoolEntity(span, value);
+    currentValidator.handleValue(this.value);
   }
   void handleNull(Span span) {
     this.value = new NullEntity(span);
+    currentValidator.handleValue(this.value);
   }
 
   // Called when the opening "{" of an object is parsed.
@@ -78,9 +82,9 @@ class JsonEntityValidatorListener extends JsonListener {
     assert(currentContainer != null);
     assert(currentContainer is ObjectEntity);
     currentContainer.span = span;
+    popValidator();
     currentValidator.leaveObject(currentContainer);
     popContainer();
-    popValidator();
   }
 
   // Called when the opening "[" of an array is parsed.
@@ -98,9 +102,9 @@ class JsonEntityValidatorListener extends JsonListener {
     assert(currentContainer != null);
     assert(currentContainer is ArrayEntity);
     currentContainer.span = span;
+    popValidator();
     currentValidator.leaveArray(currentContainer);
     popContainer();
-    popValidator();
   }
 
   // Called when a ":" is parsed inside an object.
@@ -143,7 +147,7 @@ class JsonEntityValidatorListener extends JsonListener {
   }
 }
 
-// Abstract base class of all types of json entities that are parsed 
+// Abstract base class of all types of json entities that are parsed
 // and exposed with a [Span].
 abstract class JsonEntity {
   Span span;
@@ -207,32 +211,38 @@ class ObjectEntity extends ContainerEntity {
 
 // Event based interface of a json validator.
 abstract class JsonEntityValidator {
+  // Invoked when any simple value or literal has been parsed.
+  void handleValue(ValueEntity entity);
+
   // Invoked when entering an array
   JsonEntityValidator enterArray();
   // Invoked when leaving an array
-  void leaveArray(ArrayEntity array);
+  void leaveArray(ArrayEntity entity);
   // Invoked after parsing an array value
-  void arrayElement(JsonEntity element);
+  void arrayElement(JsonEntity entity);
 
   // Invoked when entering an object
   JsonEntityValidator enterObject();
   // Invoked when leaving an object
-  void leaveObject(ObjectEntity object);
+  void leaveObject(ObjectEntity entity);
   // Invoked after parsing an property name inside an object
-  JsonEntityValidator propertyName(StringEntity name);
+  JsonEntityValidator propertyName(StringEntity entity);
   // Invoked after parsing a propery value inside an object
-  void propertyValue(JsonEntity value);
+  void propertyValue(JsonEntity entity);
 }
 
-// No-op base implementation of a [Validator]. 
+// No-op base implementation of a [Validator].
 class NullValidator implements JsonEntityValidator {
-  static final instance = new NullValidator();
+  static final JsonEntityValidator instance = new NullValidator();
+
+  void handleValue(ValueEntity entity) {}
+
   JsonEntityValidator enterArray() { return instance; }
-  void leaveArray(ArrayEntity array) {}
-  void arrayElement(JsonEntity element) {}
+  void leaveArray(ArrayEntity entity) {}
+  void arrayElement(JsonEntity entity) {}
 
   JsonEntityValidator enterObject() { return instance; }
-  void leaveObject(ObjectEntity object) {}
-  JsonEntityValidator propertyName(StringEntity name) { return instance; }
-  void propertyValue(JsonEntity value) {}
+  void leaveObject(ObjectEntity entity) {}
+  JsonEntityValidator propertyName(StringEntity entity) { return instance; }
+  void propertyValue(JsonEntity entity) {}
 }
