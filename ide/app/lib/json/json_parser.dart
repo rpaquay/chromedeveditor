@@ -13,8 +13,11 @@ library spark.json_parser;
 // Straightfoward span representation.
 class Span {
   int start; // Start position (inclusive)
-  int end; // End position (inclusive)
-  Span(this.start, this.end);
+  int end; // End position (exclusive)
+  Span(this.start, this.end) {
+    assert(start >= 0);
+    assert(end >= start);
+  }
 }
 
 // Simple API for JSON parsing.
@@ -34,35 +37,31 @@ abstract class JsonListener {
   void fail(String source, Span span, String message) {}
 }
 
-class SpanState {
-  final List<int> _startPositions = <int>[];
-  final List<int> _endPositions = <int>[];
-  int _literalStart;
+// Stack of container/literal positions to keep track of their spans.
+class _SpanStack {
+  final List<int> _containerStartPositions = <int>[];
+  int _literalStartPosition;
   Span _lastSpan;
 
   void enterContainer(int position) {
-    assert(_startPositions.length >= _endPositions.length);
-    _literalStart = null;
-    _startPositions.add(position);
+    _literalStartPosition = null;
+    _containerStartPositions.add(position);
   }
 
-  Span leaveContainer(int position) {
-    assert(_startPositions.length >= _endPositions.length);
-    assert(_startPositions.length > 0);
-    _endPositions.add(position);
-    _literalStart = null;
-    _lastSpan = new Span(_startPositions.last, position);
-    return _lastSpan;
+  void leaveContainer(int position) {
+    assert(_containerStartPositions.length > 0);
+    _literalStartPosition = null;
+    _lastSpan = new Span(_containerStartPositions.removeLast(), position);
   }
 
   void enterLiteral(int position) {
-    _literalStart = position;
+    _literalStartPosition = position;
   }
 
   void leaveLiteral(int position) {
-    assert(_literalStart != null);
-    _lastSpan = new Span(_literalStart, position);
-    _literalStart = null;
+    assert(_literalStartPosition != null);
+    _lastSpan = new Span(_literalStartPosition, position);
+    _literalStartPosition = null;
   }
 
   Span getLastSpan() {
@@ -170,7 +169,7 @@ class JsonParser {
   void parse() {
     final List<int> states = <int>[];
     int state = STATE_INITIAL;
-    SpanState _spans = new SpanState();
+    _SpanStack _spans = new _SpanStack();
     int position = 0;
     int length = source.length;
     while (position < length) {
@@ -205,12 +204,15 @@ class JsonParser {
         case RBRACE:
           position++;  // Skip the brace
           if (state == STATE_OBJECT_EMPTY) {
-            listener.endObject(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            listener.endObject(_spans.getLastSpan());
           } else if (state == STATE_OBJECT_VALUE) {
             listener.propertyValue(_spans.getLastSpan());
-            listener.endObject(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            listener.endObject(_spans.getLastSpan());
           } else {
-            failSpan(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            failSpan(_spans.getLastSpan());
           }
           state = states.removeLast() | VALUE_READ_BITS;
           break;
@@ -218,12 +220,15 @@ class JsonParser {
         case RBRACKET:
           position++;  // Skip the bracket
           if (state == STATE_ARRAY_EMPTY) {
-            listener.endArray(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            listener.endArray(_spans.getLastSpan());
           } else if (state == STATE_ARRAY_VALUE) {
             listener.arrayElement(_spans.getLastSpan());
-            listener.endArray(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            listener.endArray(_spans.getLastSpan());
           } else {
-            failSpan(_spans.leaveContainer(position));
+            _spans.leaveContainer(position);
+            failSpan(_spans.getLastSpan());
           }
           state = states.removeLast() | VALUE_READ_BITS;
           break;
