@@ -35,39 +35,39 @@ abstract class JsonListener {
 }
 
 class SpanState {
-  final List<int> startPositions = <int>[];
-  final List<int> endPositions = <int>[];
-  Span lastSpan;
+  final List<int> _startPositions = <int>[];
+  final List<int> _endPositions = <int>[];
+  int _literalStart;
+  Span _lastSpan;
 
-  void enter(int position) {
-    assert(startPositions.length >= endPositions.length);
-    startPositions.add(position);
+  void enterContainer(int position) {
+    assert(_startPositions.length >= _endPositions.length);
+    _literalStart = null;
+    _startPositions.add(position);
   }
 
-  void leave(int position) {
-    assert(startPositions.length >= endPositions.length);
-    assert(startPositions.length > 0);
-    endPositions.add(position);
+  Span leaveContainer(int position) {
+    assert(_startPositions.length >= _endPositions.length);
+    assert(_startPositions.length > 0);
+    _endPositions.add(position);
+    _literalStart = null;
+    _lastSpan = new Span(_startPositions.last, position);
+    return _lastSpan;
   }
 
-  Span pop() {
-    assert(startPositions.length > 0);
-    assert(endPositions.length > 0);
-    assert(startPositions.length >= endPositions.length);
-    int start = startPositions.removeLast();
-    int end = endPositions.removeLast();
-    var span = new Span(start, end);
-    lastSpan = span;
-    return span;
+  void enterLiteral(int position) {
+    _literalStart = position;
   }
-  
-  Span leaveLastSpan(int position) {
-    if (lastSpan == null) {
-      lastSpan = new Span(startPositions.last, endPositions.last);
-    }
-    assert(lastSpan != null);
-    assert(position >= lastSpan.end);
-    return new Span(lastSpan.start, position);
+
+  void leaveLiteral(int position) {
+    assert(_literalStart != null);
+    _lastSpan = new Span(_literalStart, position);
+    _literalStart = null;
+  }
+
+  Span getLastSpan() {
+    assert(_lastSpan != null);
+    return _lastSpan;
   }
 }
 
@@ -170,7 +170,7 @@ class JsonParser {
   void parse() {
     final List<int> states = <int>[];
     int state = STATE_INITIAL;
-    SpanState spanState = new SpanState();
+    SpanState _spans = new SpanState();
     int position = 0;
     int length = source.length;
     while (position < length) {
@@ -183,116 +183,109 @@ class JsonParser {
         case TAB:
           position++;
           break;
-        // String literal
-        case QUOTE:
-          if ((state & ALLOW_STRING_MASK) != 0) fail(position);
-          spanState.enter(position);
-          position = parseString(position + 1);
-          spanState.leave(position);
-          state |= VALUE_READ_BITS;
-          break;
-        // Enter array definition
-        case LBRACKET:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
-          listener.beginArray(position);
-          states.add(state);
-          state = STATE_ARRAY_EMPTY;
-          position++;
-          break;
         // Enter object definition
         case LBRACE:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
+          _spans.enterContainer(position);
           listener.beginObject(position);
           states.add(state);
           state = STATE_OBJECT_EMPTY;
           position++;
           break;
-        // "null"
-        case CHAR_n:
+        // Enter array definition
+        case LBRACKET:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
-          position = parseNull(position);
-          spanState.leave(position);
-          state |= VALUE_READ_BITS;
+          _spans.enterContainer(position);
+          listener.beginArray(position);
+          states.add(state);
+          state = STATE_ARRAY_EMPTY;
+          position++;
           break;
-        // "false"
-        case CHAR_f:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
-          position = parseFalse(position);
-          spanState.leave(position);
-          state |= VALUE_READ_BITS;
+        // End of object
+        case RBRACE:
+          position++;  // Skip the brace
+          if (state == STATE_OBJECT_EMPTY) {
+            listener.endObject(_spans.leaveContainer(position));
+          } else if (state == STATE_OBJECT_VALUE) {
+            listener.propertyValue(_spans.getLastSpan());
+            listener.endObject(_spans.leaveContainer(position));
+          } else {
+            failSpan(_spans.leaveContainer(position));
+          }
+          state = states.removeLast() | VALUE_READ_BITS;
           break;
-        // "true"
-        case CHAR_t:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
-          position = parseTrue(position);
-          spanState.leave(position);
-          state |= VALUE_READ_BITS;
+        // End of array
+        case RBRACKET:
+          position++;  // Skip the bracket
+          if (state == STATE_ARRAY_EMPTY) {
+            listener.endArray(_spans.leaveContainer(position));
+          } else if (state == STATE_ARRAY_VALUE) {
+            listener.arrayElement(_spans.getLastSpan());
+            listener.endArray(_spans.leaveContainer(position));
+          } else {
+            failSpan(_spans.leaveContainer(position));
+          }
+          state = states.removeLast() | VALUE_READ_BITS;
           break;
         // property name separator
         case COLON:
           if (state != STATE_OBJECT_KEY) fail(position);
-          listener.propertyName(spanState.leaveLastSpan(position));
+          listener.propertyName(_spans.getLastSpan());
           state = STATE_OBJECT_COLON;
           position++;
           break;
-        // Array element separator
+        // Array element/object value separator
         case COMMA:
           if (state == STATE_OBJECT_VALUE) {
-            listener.propertyValue(spanState.leaveLastSpan(position));
+            listener.propertyValue(_spans.getLastSpan());
             state = STATE_OBJECT_COMMA;
             position++;
           } else if (state == STATE_ARRAY_VALUE) {
-            listener.arrayElement(spanState.leaveLastSpan(position));
+            listener.arrayElement(_spans.getLastSpan());
             state = STATE_ARRAY_COMMA;
             position++;
           } else {
             fail(position);
           }
           break;
-        // End of array
-        case RBRACKET:
-          if (state == STATE_ARRAY_EMPTY) {
-            spanState.leave(position);
-            listener.endArray(spanState.pop());
-          } else if (state == STATE_ARRAY_VALUE) {
-            listener.arrayElement(spanState.pop());
-            spanState.leave(position);
-            listener.endArray(spanState.pop());
-          } else {
-            spanState.leave(position);
-            spanState.pop();
-            fail(position);
-          }
-          state = states.removeLast() | VALUE_READ_BITS;
-          position++;
+        // String literal
+        case QUOTE:
+          if ((state & ALLOW_STRING_MASK) != 0) fail(position);
+          _spans.enterLiteral(position);
+          position = parseString(position + 1);
+          _spans.leaveLiteral(position);
+          state |= VALUE_READ_BITS;
           break;
-        // End of object
-        case RBRACE:
-          if (state == STATE_OBJECT_EMPTY) {
-            spanState.leave(position);
-            listener.endObject(spanState.pop());
-          } else if (state == STATE_OBJECT_VALUE) {
-            listener.propertyValue(spanState.pop());
-            spanState.leave(position);
-            listener.endObject(spanState.pop());
-          } else {
-            spanState.leave(position);
-            failSpan(spanState.pop());
-          }
-          state = states.removeLast() | VALUE_READ_BITS;
-          position++;
+        // "null"
+        case CHAR_n:
+          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
+          _spans.enterLiteral(position);
+          position = parseNull(position);
+          _spans.leaveLiteral(position);
+          state |= VALUE_READ_BITS;
+          break;
+        // "false"
+        case CHAR_f:
+          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
+          _spans.enterLiteral(position);
+          position = parseFalse(position);
+          _spans.leaveLiteral(position);
+          state |= VALUE_READ_BITS;
+          break;
+        // "true"
+        case CHAR_t:
+          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
+          _spans.enterLiteral(position);
+          position = parseTrue(position);
+          _spans.leaveLiteral(position);
+          state |= VALUE_READ_BITS;
           break;
         // Number
         default:
           if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          spanState.enter(position);
+          _spans.enterLiteral(position);
           position = parseNumber(char, position);
-          spanState.leave(position);
+          _spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
       }
