@@ -24,7 +24,9 @@ class ManifestJsonProperties {
 
 final manifestJsonProperties = new ManifestJsonProperties();
 
-// Implement of ErrorSink for a [File] instance.
+/**
+ * Implementation of [ErrorSink] for a [File] instance.
+ */
 class FileErrorSink implements ErrorSink {
   final File file;
   final String markerType;
@@ -32,7 +34,7 @@ class FileErrorSink implements ErrorSink {
   /*final*/ StringLineOffsets lineOffsets;
 
   FileErrorSink(this.file, String contents, this.markerType, this.markerSeverity) {
-    this.lineOffsets = new StringLineOffsets(contents);    
+    this.lineOffsets = new StringLineOffsets(contents);
     file.clearMarkers(markerType);
   }
 
