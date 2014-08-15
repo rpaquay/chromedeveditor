@@ -33,11 +33,14 @@ abstract class JsonListener {
   void beginArray(int position) {}
   void arrayElement(Span span) {}
   void endArray(Span span) {}
+  void endDocument(Span span) {}
   /** Called on failure to parse [source]. */
   void fail(String source, Span span, String message) {}
 }
 
-// Stack of container/literal positions to keep track of their spans.
+/**
+ * Stack of container/literal positions used to keep track of their spans.
+ */
 class _SpanStack {
   final List<int> _containerStartPositions = <int>[];
   int _literalStartPosition;
@@ -70,6 +73,9 @@ class _SpanStack {
   }
 }
 
+/**
+ * A simple non-recursive state-based parser for JSON.
+ */
 class JsonParser {
   // A simple non-recursive state-based parser for JSON.
   //
@@ -161,19 +167,19 @@ class JsonParser {
   static const int LBRACE = 0x7b;
   static const int RBRACE = 0x7d;
 
-  final String source;
-  final JsonListener listener;
-  JsonParser(this.source, this.listener);
+  final String _source;
+  final JsonListener _listener;
+  JsonParser(this._source, this._listener);
 
-  /** Parses [source], or throws if it fails. */
+  /** Parses [_source], or throws if it fails. */
   void parse() {
     final List<int> states = <int>[];
     int state = STATE_INITIAL;
-    _SpanStack _spans = new _SpanStack();
+    _SpanStack spans = new _SpanStack();
     int position = 0;
-    int length = source.length;
+    int length = _source.length;
     while (position < length) {
-      int char = source.codeUnitAt(position);
+      int char = _source.codeUnitAt(position);
       switch (char) {
         // Whitespace characters
         case SPACE:
@@ -184,18 +190,18 @@ class JsonParser {
           break;
         // Enter object definition
         case LBRACE:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterContainer(position);
-          listener.beginObject(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterContainer(position);
+          _listener.beginObject(position);
           states.add(state);
           state = STATE_OBJECT_EMPTY;
           position++;
           break;
         // Enter array definition
         case LBRACKET:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterContainer(position);
-          listener.beginArray(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterContainer(position);
+          _listener.beginArray(position);
           states.add(state);
           state = STATE_ARRAY_EMPTY;
           position++;
@@ -203,15 +209,15 @@ class JsonParser {
         // End of object
         case RBRACE:
           if (state == STATE_OBJECT_EMPTY) {
-            _spans.leaveContainer(position + 1);
-            listener.endObject(_spans.getLastSpan());
+            spans.leaveContainer(position + 1);
+            _listener.endObject(spans.getLastSpan());
           } else if (state == STATE_OBJECT_VALUE) {
-            listener.propertyValue(_spans.getLastSpan());
-            _spans.leaveContainer(position + 1);
-            listener.endObject(_spans.getLastSpan());
+            _listener.propertyValue(spans.getLastSpan());
+            spans.leaveContainer(position + 1);
+            _listener.endObject(spans.getLastSpan());
           } else {
-            fail(position);
-            _spans.leaveContainer(position + 1);
+            _fail(position);
+            spans.leaveContainer(position + 1);
           }
           state = states.removeLast() | VALUE_READ_BITS;
           position++;
@@ -219,83 +225,84 @@ class JsonParser {
         // End of array
         case RBRACKET:
           if (state == STATE_ARRAY_EMPTY) {
-            _spans.leaveContainer(position + 1);
-            listener.endArray(_spans.getLastSpan());
+            spans.leaveContainer(position + 1);
+            _listener.endArray(spans.getLastSpan());
           } else if (state == STATE_ARRAY_VALUE) {
-            listener.arrayElement(_spans.getLastSpan());
-            _spans.leaveContainer(position + 1);
-            listener.endArray(_spans.getLastSpan());
+            _listener.arrayElement(spans.getLastSpan());
+            spans.leaveContainer(position + 1);
+            _listener.endArray(spans.getLastSpan());
           } else {
-            fail(position);
-            _spans.leaveContainer(position + 1);
+            _fail(position);
+            spans.leaveContainer(position + 1);
           }
           state = states.removeLast() | VALUE_READ_BITS;
-          position++;  // Skip the bracket
+          position++; // Skip the bracket
           break;
         // property name separator
         case COLON:
-          if (state != STATE_OBJECT_KEY) fail(position);
-          listener.propertyName(_spans.getLastSpan());
+          if (state != STATE_OBJECT_KEY) _fail(position);
+          _listener.propertyName(spans.getLastSpan());
           state = STATE_OBJECT_COLON;
           position++;
           break;
         // Array element/object value separator
         case COMMA:
           if (state == STATE_OBJECT_VALUE) {
-            listener.propertyValue(_spans.getLastSpan());
+            _listener.propertyValue(spans.getLastSpan());
             state = STATE_OBJECT_COMMA;
             position++;
           } else if (state == STATE_ARRAY_VALUE) {
-            listener.arrayElement(_spans.getLastSpan());
+            _listener.arrayElement(spans.getLastSpan());
             state = STATE_ARRAY_COMMA;
             position++;
           } else {
-            fail(position);
+            _fail(position);
           }
           break;
         // String literal
         case QUOTE:
-          if ((state & ALLOW_STRING_MASK) != 0) fail(position);
-          _spans.enterLiteral(position);
-          position = parseString(position + 1);
-          _spans.leaveLiteral(position);
+          if ((state & ALLOW_STRING_MASK) != 0) _fail(position);
+          spans.enterLiteral(position);
+          position = _parseString(position + 1);
+          spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
         // "null"
         case CHAR_n:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterLiteral(position);
-          position = parseNull(position);
-          _spans.leaveLiteral(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterLiteral(position);
+          position = _parseNull(position);
+          spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
         // "false"
         case CHAR_f:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterLiteral(position);
-          position = parseFalse(position);
-          _spans.leaveLiteral(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterLiteral(position);
+          position = _parseFalse(position);
+          spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
         // "true"
         case CHAR_t:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterLiteral(position);
-          position = parseTrue(position);
-          _spans.leaveLiteral(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterLiteral(position);
+          position = _parseTrue(position);
+          spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
         // Number
         default:
-          if ((state & ALLOW_VALUE_MASK) != 0) fail(position);
-          _spans.enterLiteral(position);
-          position = parseNumber(char, position);
-          _spans.leaveLiteral(position);
+          if ((state & ALLOW_VALUE_MASK) != 0) _fail(position);
+          spans.enterLiteral(position);
+          position = _parseNumber(char, position);
+          spans.leaveLiteral(position);
           state |= VALUE_READ_BITS;
           break;
       }
     }
-    if (state != STATE_END) fail(position, "Unexpected end of file.");
+    if (state != STATE_END) _fail(position, "Unexpected end of file.");
+    _listener.endDocument(new Span(0, position));
   }
 
   /**
@@ -303,13 +310,13 @@ class JsonParser {
    *
    * [:source[position]:] must be "t".
    */
-  int parseTrue(int position) {
-    assert(source.codeUnitAt(position) == CHAR_t);
-    if (source.length < position + 4) fail(position, "Unexpected identifier");
-    if (source.codeUnitAt(position + 1) != CHAR_r || source.codeUnitAt(position + 2) != CHAR_u || source.codeUnitAt(position + 3) != CHAR_e) {
-      fail(position);
+  int _parseTrue(int position) {
+    assert(_source.codeUnitAt(position) == CHAR_t);
+    if (_source.length < position + 4) _fail(position, "Unexpected identifier");
+    if (_source.codeUnitAt(position + 1) != CHAR_r || _source.codeUnitAt(position + 2) != CHAR_u || _source.codeUnitAt(position + 3) != CHAR_e) {
+      _fail(position);
     }
-    listener.handleBool(new Span(position, position + 4), true);
+    _listener.handleBool(new Span(position, position + 4), true);
     return position + 4;
   }
 
@@ -318,13 +325,13 @@ class JsonParser {
    *
    * [:source[position]:] must be "f".
    */
-  int parseFalse(int position) {
-    assert(source.codeUnitAt(position) == CHAR_f);
-    if (source.length < position + 5) fail(position, "Unexpected identifier");
-    if (source.codeUnitAt(position + 1) != CHAR_a || source.codeUnitAt(position + 2) != CHAR_l || source.codeUnitAt(position + 3) != CHAR_s || source.codeUnitAt(position + 4) != CHAR_e) {
-      fail(position);
+  int _parseFalse(int position) {
+    assert(_source.codeUnitAt(position) == CHAR_f);
+    if (_source.length < position + 5) _fail(position, "Unexpected identifier");
+    if (_source.codeUnitAt(position + 1) != CHAR_a || _source.codeUnitAt(position + 2) != CHAR_l || _source.codeUnitAt(position + 3) != CHAR_s || _source.codeUnitAt(position + 4) != CHAR_e) {
+      _fail(position);
     }
-    listener.handleBool(new Span(position, position + 4), false);
+    _listener.handleBool(new Span(position, position + 4), false);
     return position + 5;
   }
 
@@ -332,32 +339,32 @@ class JsonParser {
    *
    * [:source[position]:] must be "n".
    */
-  int parseNull(int position) {
-    assert(source.codeUnitAt(position) == CHAR_n);
-    if (source.length < position + 4) fail(position, "Unexpected identifier");
-    if (source.codeUnitAt(position + 1) != CHAR_u || source.codeUnitAt(position + 2) != CHAR_l || source.codeUnitAt(position + 3) != CHAR_l) {
-      fail(position);
+  int _parseNull(int position) {
+    assert(_source.codeUnitAt(position) == CHAR_n);
+    if (_source.length < position + 4) _fail(position, "Unexpected identifier");
+    if (_source.codeUnitAt(position + 1) != CHAR_u || _source.codeUnitAt(position + 2) != CHAR_l || _source.codeUnitAt(position + 3) != CHAR_l) {
+      _fail(position);
     }
-    listener.handleNull(new Span(position, position + 4));
+    _listener.handleNull(new Span(position, position + 4));
     return position + 4;
   }
 
-  int parseString(int position) {
+  int _parseString(int position) {
     // Format: '"'([^\x00-\x1f\\\"]|'\\'[bfnrt/\\"])*'"'
     // Initial position is right after first '"'.
     int start = position;
     int char;
     do {
-      if (position == source.length) {
-        fail(start - 1, "Unterminated string");
+      if (position == _source.length) {
+        _fail(start - 1, "Unterminated string");
       }
-      char = source.codeUnitAt(position);
+      char = _source.codeUnitAt(position);
       if (char == QUOTE) {
-        listener.handleString(new Span(start - 1, position + 1), source.substring(start, position));
+        _listener.handleString(new Span(start - 1, position + 1), _source.substring(start, position));
         return position + 1;
       }
       if (char < SPACE) {
-        fail(position, "Control character in string");
+        _fail(position, "Control character in string");
       }
       position++;
     } while (char != BACKSLASH);
@@ -365,10 +372,10 @@ class JsonParser {
     int firstEscape = position - 1;
     List<int> chars = <int>[];
     while (true) {
-      if (position == source.length) {
-        fail(start - 1, "Unterminated string");
+      if (position == _source.length) {
+        _fail(start - 1, "Unterminated string");
       }
-      char = source.codeUnitAt(position);
+      char = _source.codeUnitAt(position);
       switch (char) {
         case CHAR_b:
           char = BACKSPACE;
@@ -394,18 +401,18 @@ class JsonParser {
           int value = 0;
           for (int i = 0; i < 4; i++) {
             position++;
-            if (position == source.length) {
-              fail(start - 1, "Unterminated string");
+            if (position == _source.length) {
+              _fail(start - 1, "Unterminated string");
             }
-            char = source.codeUnitAt(position);
+            char = _source.codeUnitAt(position);
             char -= 0x30;
-            if (char < 0) fail(hexStart, "Invalid unicode escape");
+            if (char < 0) _fail(hexStart, "Invalid unicode escape");
             if (char < 10) {
               value = value * 16 + char;
             } else {
               char = (char | 0x20) - 0x31;
               if (char < 0 || char > 5) {
-                fail(hexStart, "Invalid unicode escape");
+                _fail(hexStart, "Invalid unicode escape");
               }
               value = value * 16 + char + 10;
             }
@@ -413,24 +420,24 @@ class JsonParser {
           char = value;
           break;
         default:
-          if (char < SPACE) fail(position, "Control character in string");
-          fail(position, "Unrecognized string escape");
+          if (char < SPACE) _fail(position, "Control character in string");
+          _fail(position, "Unrecognized string escape");
       }
       do {
         chars.add(char);
         position++;
-        if (position == source.length) fail(start - 1, "Unterminated string");
-        char = source.codeUnitAt(position);
+        if (position == _source.length) _fail(start - 1, "Unterminated string");
+        char = _source.codeUnitAt(position);
         if (char == QUOTE) {
           String result = new String.fromCharCodes(chars);
           if (start < firstEscape) {
-            result = "${source.substring(start, firstEscape)}$result";
+            result = "${_source.substring(start, firstEscape)}$result";
           }
-          listener.handleString(new Span(start - 1, position + 1), result);
+          _listener.handleString(new Span(start - 1, position + 1), result);
           return position + 1;
         }
         if (char < SPACE) {
-          fail(position, "Control character in string");
+          _fail(position, "Control character in string");
         }
       } while (char != BACKSLASH);
       position++;
@@ -438,90 +445,90 @@ class JsonParser {
   }
 
   int _handleLiteral(start, position, isDouble) {
-    String literal = source.substring(start, position);
+    String literal = _source.substring(start, position);
     // This correctly creates -0 for doubles.
     num value = (isDouble ? double.parse(literal) : int.parse(literal));
-    listener.handleNumber(new Span(start, position), value);
+    _listener.handleNumber(new Span(start, position), value);
     return position;
   }
 
-  int parseNumber(int char, int position) {
+  int _parseNumber(int char, int position) {
     // Format:
     //  '-'?('0'|[1-9][0-9]*)('.'[0-9]+)?([eE][+-]?[0-9]+)?
     int start = position;
-    int length = source.length;
+    int length = _source.length;
     bool isDouble = false;
     if (char == MINUS) {
       position++;
-      if (position == length) fail(position, "Missing expected digit");
-      char = source.codeUnitAt(position);
+      if (position == length) _fail(position, "Missing expected digit");
+      char = _source.codeUnitAt(position);
     }
     if (char < CHAR_0 || char > CHAR_9) {
-      fail(position, "Missing expected digit");
+      _fail(position, "Missing expected digit");
     }
     if (char == CHAR_0) {
       position++;
       if (position == length) return _handleLiteral(start, position, false);
-      char = source.codeUnitAt(position);
+      char = _source.codeUnitAt(position);
       if (CHAR_0 <= char && char <= CHAR_9) {
-        fail(position);
+        _fail(position);
       }
     } else {
       do {
         position++;
         if (position == length) return _handleLiteral(start, position, false);
-        char = source.codeUnitAt(position);
+        char = _source.codeUnitAt(position);
       } while (CHAR_0 <= char && char <= CHAR_9);
     }
     if (char == DECIMALPOINT) {
       isDouble = true;
       position++;
-      if (position == length) fail(position, "Missing expected digit");
-      char = source.codeUnitAt(position);
-      if (char < CHAR_0 || char > CHAR_9) fail(position);
+      if (position == length) _fail(position, "Missing expected digit");
+      char = _source.codeUnitAt(position);
+      if (char < CHAR_0 || char > CHAR_9) _fail(position);
       do {
         position++;
         if (position == length) return _handleLiteral(start, position, true);
-        char = source.codeUnitAt(position);
+        char = _source.codeUnitAt(position);
       } while (CHAR_0 <= char && char <= CHAR_9);
     }
     if (char == CHAR_e || char == CHAR_E) {
       isDouble = true;
       position++;
-      if (position == length) fail(position, "Missing expected digit");
-      char = source.codeUnitAt(position);
+      if (position == length) _fail(position, "Missing expected digit");
+      char = _source.codeUnitAt(position);
       if (char == PLUS || char == MINUS) {
         position++;
-        if (position == length) fail(position, "Missing expected digit");
-        char = source.codeUnitAt(position);
+        if (position == length) _fail(position, "Missing expected digit");
+        char = _source.codeUnitAt(position);
       }
       if (char < CHAR_0 || char > CHAR_9) {
-        fail(position, "Missing expected digit");
+        _fail(position, "Missing expected digit");
       }
       do {
         position++;
         if (position == length) return _handleLiteral(start, position, true);
-        char = source.codeUnitAt(position);
+        char = _source.codeUnitAt(position);
       } while (CHAR_0 <= char && char <= CHAR_9);
     }
     return _handleLiteral(start, position, isDouble);
   }
 
-  void fail(int position, [String message]) {
-    failSpan(new Span(position, position + 20), message);
+  void _fail(int position, [String message]) {
+    _failSpan(new Span(position, position + 20), message);
   }
 
-  void failSpan(Span span, [String message]) {
+  void _failSpan(Span span, [String message]) {
     if (message == null) message = "Unexpected character";
-    listener.fail(source, span, message);
+    _listener.fail(_source, span, message);
     // If the listener didn't throw, do it here.
     int position = span.start;
     int sliceEnd = span.end;
     String slice;
-    if (sliceEnd > source.length) {
-      slice = "'${source.substring(position)}'";
+    if (sliceEnd > _source.length) {
+      slice = "'${_source.substring(position)}'";
     } else {
-      slice = "'${source.substring(position, sliceEnd)}...'";
+      slice = "'${_source.substring(position, sliceEnd)}...'";
     }
     throw new FormatException("Unexpected character at $position: $slice");
   }
