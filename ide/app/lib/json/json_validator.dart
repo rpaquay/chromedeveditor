@@ -214,25 +214,59 @@ class ArrayEntity extends ContainerEntity {
 class ObjectEntity extends ContainerEntity {
 }
 
-// Event based interface of a json validator.
+/**
+ * Eent based interface of a json validator.
+ */
 abstract class JsonEntityValidator {
-  // Invoked when the json document contains a single root literal value.
+  /**
+   * Invoked when the json document contains a single root literal value.
+   */
   void handleRootValue(ValueEntity entity);
 
-  // Invoked when entering an array
+  /**
+   * Invoked when entering an array.
+   *
+   * Returns a validator for the array elements.
+   */
   JsonEntityValidator enterArray();
-  // Invoked when leaving an array
+
+  /**
+   * Invoked after parsing an array. Called on the validator that received the
+   * corresponding [enterArray].
+   */
   void leaveArray(ArrayEntity entity);
-  // Invoked after parsing an array value
+
+  /**
+   * Invoked after parsing an array value. Called on the validator returned
+   * by the corresponding [enterArray].
+   */
   void arrayElement(JsonEntity entity);
 
-  // Invoked when entering an object
+  /**
+   * Invoked when entering an object.
+   *
+   * Returns a validator for the object properties.
+   */
   JsonEntityValidator enterObject();
-  // Invoked when leaving an object
+
+  /**
+   * Invoked when leaving an object. Called on the validator that received
+   * the corresponding [enterObject].
+   */
   void leaveObject(ObjectEntity entity);
-  // Invoked after parsing an property name inside an object
+
+  /**
+   * Invoked after parsing an property name inside an object. Called on the
+   * validator returned by the corresponding [enterObject].
+   *
+   * Returns a validator for the property value.
+   */
   JsonEntityValidator propertyName(StringEntity entity);
-  // Invoked after parsing a propery value inside an object
+
+  /**
+   * Invoked after parsing a propery value inside an object. Called on the
+   * validator retruned by the corresponding [propertyName].
+   */
   void propertyValue(JsonEntity entity);
 }
 
