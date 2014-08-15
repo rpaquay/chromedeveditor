@@ -1,0 +1,4 @@
+name: unit_tests
+description: Test runner for Spark unit tests
+dependencies:
+  unittest: any
