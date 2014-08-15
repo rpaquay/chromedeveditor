@@ -8,7 +8,10 @@ library spark.utils;
 class LineColumn {
   final int line;
   final int column;
-  LineColumn(this.line, this.column);
+  LineColumn(this.line, this.column) {
+    assert(line >= 1);
+    assert(column >= 1);
+  }
 }
 
 // Utility class for converting between offsets and (line,column) positions
@@ -19,51 +22,64 @@ class StringLineOffsets {
 
   StringLineOffsets(this.contents);
 
+  /**
+   * Returns a 1-based [LineColumn] instances from an offset [position].
+   */
   LineColumn getLineColumn(int position) {
-    int lineNumber = _calcLineNumber(position);
-    int columnNumber = 0;
-    if (lineNumber < lineOffsets.length) {
-      columnNumber = position - lineOffsets[lineNumber];
-    }
-
-    return new LineColumn(lineNumber + 1, columnNumber + 1);
+    int lineIndex = _calcLineIndex(position);
+    int columnIndex = position - lineOffsets[lineIndex];
+    return new LineColumn(lineIndex + 1, columnIndex + 1);
   }
 
   /**
-   * Count the newlines between 0 and position.
+   * Counts the newlines between 0 and position.
    */
-  int _calcLineNumber(int position) {
-   if (lineOffsets == null)
-     lineOffsets = _createLineOffsets(contents);
+  int _calcLineIndex(int position) {
+    assert(position >= 0);
+    if (lineOffsets == null)
+      lineOffsets = _createLineOffsets(contents);
 
-   // Binary search
-   int lineNumber = _binarySearch(lineOffsets, position);
-   if (lineNumber < 0)
-     lineNumber = (~lineNumber) - 1;
-   return lineNumber;
+    int lineIndex = _binarySearch(lineOffsets, position);
+    if (lineIndex < 0) {
+      // Note: we need "- 1" because the binary search returns the
+      // insertion index of [position], while we are interested
+      // in the line containing [position].
+      lineIndex = (~lineIndex) - 1;
+    }
+    assert(lineIndex >= 0 && lineIndex < lineOffsets.length);
+    return lineIndex;
   }
 
+  /**
+   * Returns the position of [item] in [items] if present.
+   * Returns the bitwise complement (~) of the insertion position if [item] is
+   * not found.
+   */
   static int _binarySearch(List items, var item) {
-   int cur = 0;
+   int min = 0;
    int max = items.length - 1;
-   while (cur <= max) {
-     int med = (cur + max) ~/ 2;
+   while (min <= max) {
+     int med = (min + max) ~/ 2;
      if (items[med] < item)
-       cur = med + 1;
+       min = med + 1;
      else if (items[med] > item)
        max = med - 1;
      else
        return med;
    }
-   return ~cur;
+   return ~min;
   }
 
-  // TODO(rpaquay): This should be part of [File] maybe?
+  /**
+   * Creates a sorted array of positions where line starts in [source].
+   * The first element of the returned array is always 0.
+   * TODO(rpaquay): This should be part of [File] maybe?
+   */
   static List<int> _createLineOffsets(String source) {
    List<int> result = new List<int>();
    result.add(0);  // first line always starts at offset 0
    for (int index = 0; index < source.length; index++) {
-     // TODO(rpaquay): There are other characters to consider as "end of line".
+     // TODO(rpaquay): Are there other characters to consider as "end of line".
      if (source[index] == '\n') {
        result.add(index + 1);
      }
