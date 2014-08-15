@@ -13,137 +13,142 @@ abstract class ErrorSink {
 }
 
 class JsonEntityValidatorListener extends JsonListener {
-  final ErrorSink syntaxErrorSink;
-  final List<ContainerEntity> containers = new List<ContainerEntity>();
-  final List<StringEntity> keys = new List<StringEntity>();
-  final List<JsonEntityValidator> validators = new List<JsonEntityValidator>();
-  ContainerEntity currentContainer;
-  JsonEntityValidator currentValidator;
-  StringEntity key;
-  JsonEntity value;
+  final ErrorSink _syntaxErrorSink;
+  final List<ContainerEntity> _containers = new List<ContainerEntity>();
+  final List<StringEntity> _keys = new List<StringEntity>();
+  final List<JsonEntityValidator> _validators = new List<JsonEntityValidator>();
+  ContainerEntity _currentContainer;
+  JsonEntityValidator _currentValidator;
+  StringEntity _key;
+  JsonEntity _value;
 
-  JsonEntityValidatorListener(this.syntaxErrorSink, this.currentValidator);
+  JsonEntityValidatorListener(this._syntaxErrorSink, this._currentValidator);
 
   /** Pushes the currently active container (and key, if a [Map]). */
   void pushContainer() {
-    if (currentContainer is ObjectEntity) {
-      assert(key != null);
-      keys.add(key);
+    if (_currentContainer is ObjectEntity) {
+      assert(_key != null);
+      _keys.add(_key);
     }
-    containers.add(currentContainer);
+    _containers.add(_currentContainer);
   }
 
   /** Pops the top container from the [stack], including a key if applicable. */
   void popContainer() {
-    value = currentContainer;
-    currentContainer = containers.removeLast();
-    if (currentContainer is ObjectEntity) {
-      key = keys.removeLast();
+    _value = _currentContainer;
+    _currentContainer = _containers.removeLast();
+    if (_currentContainer is ObjectEntity) {
+      _key = _keys.removeLast();
     }
   }
 
   void pushValidator() {
-    validators.add(currentValidator);
+    _validators.add(_currentValidator);
   }
 
   void popValidator() {
-    currentValidator = validators.removeLast();
+    _currentValidator = _validators.removeLast();
   }
 
   void handleString(Span span, String value) {
-    this.value = new StringEntity(span, value);
-    currentValidator.handleValue(this.value);
+    _value = new StringEntity(span, value);
   }
+
   void handleNumber(Span span, num value) {
-    this.value = new NumberEntity(span, value);
-    currentValidator.handleValue(this.value);
+    _value = new NumberEntity(span, value);
   }
+
   void handleBool(Span span, bool value) {
-    this.value = new BoolEntity(span, value);
-    currentValidator.handleValue(this.value);
+    _value = new BoolEntity(span, value);
   }
+
   void handleNull(Span span) {
-    this.value = new NullEntity(span);
-    currentValidator.handleValue(this.value);
+    _value = new NullEntity(span);
   }
 
   // Called when the opening "{" of an object is parsed.
   void beginObject(int position) {
-    assert(currentValidator != null);
+    assert(_currentValidator != null);
     pushContainer();
     pushValidator();
-    currentContainer = new ObjectEntity();
-    currentValidator = currentValidator.enterObject();
+    _currentContainer = new ObjectEntity();
+    _currentValidator = _currentValidator.enterObject();
   }
 
   // Called when the closing "}" of an object is parsed.
   void endObject(Span span) {
-    assert(currentValidator != null);
-    assert(currentContainer != null);
-    assert(currentContainer is ObjectEntity);
-    currentContainer.span = span;
+    assert(_currentValidator != null);
+    assert(_currentContainer != null);
+    assert(_currentContainer is ObjectEntity);
+    _currentContainer.span = span;
     popValidator();
-    currentValidator.leaveObject(currentContainer);
+    _currentValidator.leaveObject(_currentContainer);
     popContainer();
   }
 
   // Called when the opening "[" of an array is parsed.
   void beginArray(int position) {
-    assert(currentValidator != null);
+    assert(_currentValidator != null);
     pushContainer();
     pushValidator();
-    currentContainer = new ArrayEntity();
-    currentValidator = currentValidator.enterArray();
+    _currentContainer = new ArrayEntity();
+    _currentValidator = _currentValidator.enterArray();
   }
 
   // Called when the closing "]" of an array is parsed.
   void endArray(Span span) {
-    assert(currentValidator != null);
-    assert(currentContainer != null);
-    assert(currentContainer is ArrayEntity);
-    currentContainer.span = span;
+    assert(_currentValidator != null);
+    assert(_currentContainer != null);
+    assert(_currentContainer is ArrayEntity);
+    _currentContainer.span = span;
     popValidator();
-    currentValidator.leaveArray(currentContainer);
+    _currentValidator.leaveArray(_currentContainer);
     popContainer();
   }
 
   // Called when a ":" is parsed inside an object.
   void propertyName(Span span) {
-    assert(currentValidator != null);
-    assert(currentContainer != null);
-    assert(currentContainer is ObjectEntity);
-    assert(value != null);
-    assert(value is StringEntity);
-    key = value;
-    value = null;
+    assert(_currentValidator != null);
+    assert(_currentContainer != null);
+    assert(_currentContainer is ObjectEntity);
+    assert(_value != null);
+    assert(_value is StringEntity);
+    _key = _value;
+    _value = null;
     pushValidator();
-    currentValidator = currentValidator.propertyName(key);
+    _currentValidator = _currentValidator.propertyName(_key);
   }
 
   // Called when a "," or "}" is parsed inside an object.
   void propertyValue(Span span) {
-    assert(currentValidator != null);
-    assert(currentContainer != null);
-    assert(currentContainer is ObjectEntity);
-    assert(value != null);
-    currentValidator.propertyValue(value);
+    assert(_currentValidator != null);
+    assert(_currentContainer != null);
+    assert(_currentContainer is ObjectEntity);
+    assert(_value != null);
+    _currentValidator.propertyValue(_value);
     popValidator();
-    key = value = null;
+    _key = _value = null;
   }
 
   // Called when the "," after an array element is parsed.
   // Invariants: current entity is the array element, the parent is an ArrayObject.
   void arrayElement(Span span) {
-    assert(currentValidator != null);
-    assert(currentContainer != null);
-    assert(currentContainer is ArrayEntity);
-    assert(value != null);
-    currentValidator.arrayElement(value);
-    value = null;
+    assert(_currentValidator != null);
+    assert(_currentContainer != null);
+    assert(_currentContainer is ArrayEntity);
+    assert(_value != null);
+    _currentValidator.arrayElement(_value);
+    _value = null;
+  }
+
+  void endDocument(Span span) {
+    if (_value is ValueEntity) {
+      _currentValidator.handleRootValue(_value);
+    }
   }
 
   void fail(String source, Span span, String message) {
-    syntaxErrorSink.emitMessage(span, message);
+    _syntaxErrorSink.emitMessage(span, message);
   }
 }
 
@@ -211,8 +216,8 @@ class ObjectEntity extends ContainerEntity {
 
 // Event based interface of a json validator.
 abstract class JsonEntityValidator {
-  // Invoked when any simple value or literal has been parsed.
-  void handleValue(ValueEntity entity);
+  // Invoked when the json document contains a single root literal value.
+  void handleRootValue(ValueEntity entity);
 
   // Invoked when entering an array
   JsonEntityValidator enterArray();
@@ -235,7 +240,7 @@ abstract class JsonEntityValidator {
 class NullValidator implements JsonEntityValidator {
   static final JsonEntityValidator instance = new NullValidator();
 
-  void handleValue(ValueEntity entity) {}
+  void handleRootValue(ValueEntity entity) {}
 
   JsonEntityValidator enterArray() { return instance; }
   void leaveArray(ArrayEntity entity) {}

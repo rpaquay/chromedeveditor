@@ -20,7 +20,7 @@ class RootValidator extends NullValidator {
     errorSink.emitMessage(entity.span, "Top level element must be an object");
   }
 
-  void handleValue(ValueEntity entity) {
+  void handleRootValue(ValueEntity entity) {
     errorSink.emitMessage(entity.span, "Top level element must be an object");
   }
 }
