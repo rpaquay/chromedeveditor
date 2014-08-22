@@ -108,7 +108,7 @@ abstract class _LoggingValidatorBase implements JsonValidator {
  * The logging validator used at the top of the json document.
  */
 class _LoggingValidator extends _LoggingValidatorBase {
-  static const String invalidPropertyNameMessage = "Invalid property name";
+  static const String errorId = "ERROR_PROPERTY_NAME";
   final String contents;
   final _LoggingErrorCollector errorCollector;
   final List<_ValidatorEvent> events = new List();
@@ -133,8 +133,9 @@ class _LoggingValidator extends _LoggingValidatorBase {
   }
 
   void checkObjectPropertyName(StringEntity name) {
-    if (errorPropertyNames.contains(name.text))
-      errorCollector.addMessage(invalidPropertyNameMessage, name.span, invalidPropertyNameMessage);
+    if (errorPropertyNames.contains(name.text)) {
+      errorCollector.addMessage(errorId, name.span, "Invalid property name");
+    }
   }
 }
 
@@ -354,8 +355,8 @@ void defineTests() {
       });
 
       _LoggingEventChecker checker = new _LoggingEventChecker(validator);
-      checker.error(_LoggingValidator.invalidPropertyNameMessage);
-      checker.error(_LoggingValidator.invalidPropertyNameMessage);
+      checker.error(_LoggingValidator.errorId);
+      checker.error(_LoggingValidator.errorId);
       checker.errorEnd();
     });
   });
