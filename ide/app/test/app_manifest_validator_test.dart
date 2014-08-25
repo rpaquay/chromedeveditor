@@ -171,7 +171,7 @@ void defineTests() {
       checker.end();
     });
 
-    test('"sockets" may not contain a unknown property', () {
+    test('"sockets" cannot contain a unknown property', () {
       String contents = """
 {
   "sockets": { "foo": {} }
@@ -181,6 +181,44 @@ void defineTests() {
 
       _LoggingEventChecker checker = new _LoggingEventChecker(errorCollector);
       checker.error(json_schema_validator.ErrorIds.UNKNOWN_PROPERTY_NAME);
+      checker.end();
+    });
+
+    test('"permissions" cannot be a dictionary', () {
+      String contents = """
+{
+  "permissions": {"foo": "bar"}
+}
+""";
+      _LoggingErrorCollector errorCollector = _validateDocument(contents);
+
+      _LoggingEventChecker checker = new _LoggingEventChecker(errorCollector);
+      checker.error(json_schema_validator.ErrorIds.ARRAY_EXPECTED);
+      checker.end();
+    });
+
+    test('"permissions" cannot contain an unknown permission', () {
+      String contents = """
+{
+  "permissions": ["foo"]
+}
+""";
+      _LoggingErrorCollector errorCollector = _validateDocument(contents);
+
+      _LoggingEventChecker checker = new _LoggingEventChecker(errorCollector);
+      checker.error(ErrorIds.INVALID_PERMISSION);
+      checker.end();
+    });
+
+    test('"permissions" may contain known permissions', () {
+      String contents = """
+{
+  "permissions": ["usb", "tabs", "bookmarks"]
+}
+""";
+      _LoggingErrorCollector errorCollector = _validateDocument(contents);
+
+      _LoggingEventChecker checker = new _LoggingEventChecker(errorCollector);
       checker.end();
     });
 

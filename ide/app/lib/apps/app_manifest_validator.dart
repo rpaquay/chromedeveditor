@@ -10,6 +10,7 @@ import '../json/json_validator.dart';
 class ErrorIds {
   static final String INVALID_MANIFEST_VERSION = "INVALID_MANIFEST_VERSION";
   static final String OBSOLETE_MANIFEST_VERSION = "OBSOLETE_MANIFEST_VERSION";
+  static final String INVALID_PERMISSION = "INVALID_PERMISSION";
 }
 
 /**
@@ -36,12 +37,15 @@ class AppManifestValidatorFactory implements SchemaValidatorFactory {
   SchemaValidator createValidator(dynamic schema) {
     if (schema == "manifest_version") {
       return new ManifestVersionValueValidator(errorCollector);
+    } else if (schema == "permission") {
+      return new PermissionValueValidator(errorCollector);
     }
     return null;
   }
 
   bool validateSchemaForTesting(dynamic schema) {
-    if (schema == "manifest_version") {
+    if (schema == "manifest_version" ||
+        schema == "permission") {
       return true;
     }
     return false;
@@ -76,8 +80,143 @@ class ManifestVersionValueValidator extends IntValueValidator {
   }
 }
 
-// from https://developer.chrome.com/extensions/manifest
-// and https://developer.chrome.com/apps/manifest
+class PermissionValueValidator extends StringValueValidator {
+  PermissionValueValidator(ErrorCollector errorCollector)
+    : super(errorCollector);
+
+  void checkValue(JsonEntity entity, StringEntity propertyName) {
+    if (entity is StringEntity) {
+      switch(entity.text){
+        // From https://developer.chrome.com/apps/declare_permissions
+        case "alarms":
+        case "audio":
+        case "audioCapture":
+        case "browser":
+        case "clipboardRead":
+        case "clipboardWrite":
+        case "contextMenus":
+        case "copresence":
+        case "desktopCapture":
+        case "diagnostics":
+        case "dns":
+        case "experimental":
+        case "fileBrowserHandler":
+        case "fileSystem":
+        case "fileSystemProvider":
+        case "gcm":
+        case "geolocation":
+        case "hid":
+        case "identity":
+        case "idle":
+        case "infobars":
+        case "location":
+        case "mediaGalleries":
+        case "nativeMessaging":
+        case "notificationProvider":
+        case "notifications":
+        case "pointerLock":
+        case "power":
+        case "pushMessaging":
+        case "serial":
+        case "signedInDevices":
+        case "socket":
+        case "storage":
+        case "syncFileSystem":
+        case "system.cpu":
+        case "system.display":
+        case "system.memory":
+        case "system.network":
+        case "system.storage":
+        case "tts":
+        case "unlimitedStorage":
+        case "usb":
+        case "usbDevices":
+        case "videoCapture":
+        case "wallpaper":
+        case "webview":
+          break;
+          
+        // From https://developer.chrome.com/extensions/declare_permissions
+        case "activeTab":
+        case "background":
+        case "bookmarks":
+        case "browsingData":
+        case "contentSettings":
+        case "cookies":
+        case "debugger":
+        case "declarativeContent":
+        case "declarativeWebRequest":
+        case "downloads":
+        case "enterprise.platformKeys":
+        case "fontSettings":
+        case "history":
+        case "management":
+        case "pageCapture":
+        case "privacy":
+        case "processes":
+        case "proxy":
+        case "sessions":
+        case "tabCapture":
+        case "tabs":
+        case "topSites":
+        case "ttsEngines":
+        case "webNavigation":
+        case "webRequest":
+        case "webRequestBlocking":
+          break;
+        default:
+          errorCollector.addMessage(
+              ErrorIds.INVALID_PERMISSION,
+              entity.span,
+              "Permission value \"${entity.text}\" is not recognized.");
+          break;
+      }
+      return;
+    }
+
+    super.checkValue(entity, propertyName);
+  }
+  
+  JsonValidator enterObject() {
+    // Some permissions are expressed as a dictionary.
+    return new PermissionObjectValidator(errorCollector);    
+  }
+}
+
+class PermissionObjectValidator extends NullValidator {
+  final ErrorCollector errorCollector;
+
+  PermissionObjectValidator(this.errorCollector);
+
+  JsonValidator propertyName(StringEntity propertyName) {
+    switch(propertyName.text)
+    {
+      case "socket":
+        return new SocketPermissionValidator();
+      case "usbDevices":
+        return new UsbDevicesValidator();
+      default:
+        errorCollector.addMessage(
+             ErrorIds.INVALID_PERMISSION,
+             propertyName.span,
+             "Permission value \"${propertyName.text}\" is not recognized.");
+        return NullValidator.instance;       
+    }
+  }
+}
+
+class SocketPermissionValidator extends NullValidator {
+  
+}
+
+class UsbDevicesValidator extends NullValidator {
+  
+}
+
+/**
+ * From https://developer.chrome.com/extensions/manifest
+ * and https://developer.chrome.com/apps/manifest
+ */
 Map AppManifestSchema =
 {
   "app": {
@@ -138,11 +277,11 @@ Map AppManifestSchema =
   "oauth2": "var",
   "offline_enabled": "var",
   "omnibox": "var",
-  "optional_permissions": "var",
+  "optional_permissions": ["permission"],
   "options_page": "var",
   "page_action": "var",
   "page_actions": "var",
-  "permissions": "var",
+  "permissions": ["permission"],
   "platforms": "var",
   "plugins": "var",
   "requirements": "var",
