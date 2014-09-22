@@ -9,7 +9,7 @@ library spark.analyzer;
 
 import 'dart:async';
 
-import 'package:analyzer/src/generated/ast.dart';
+import 'package:analyzer/src/generated/ast.dart' as ast;
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/error.dart';
 import 'package:analyzer/src/generated/parser.dart';
@@ -23,7 +23,49 @@ export 'package:analyzer/src/generated/error.dart';
 export 'package:analyzer/src/generated/source.dart';
 
 import 'services_common.dart' as common;
+import 'outline_builder.dart';
+import 'dart_services.dart';
 import '../dart/sdk.dart' as sdk;
+
+/**
+ * Implementatio of [DartServices] using the [analyzer] package.
+ */
+class AnalyzerDartServices implements DartServices {
+  final DartSdk dartSdk;
+
+  AnalyzerDartServices(this.dartSdk);
+
+  Future<common.Outline> getOutlineFor(String codeString) {
+    return analyzeString(dartSdk, codeString).then((AnalyzerResult result) {
+      return new OutlineBuilder().Build(result.ast);
+    });
+  }
+
+  Future createContext(String id) {
+    return null;
+  }
+
+  Future processContextChanges(
+      String contextId,
+      List<String> addedUuids,
+      List<String> changedUuids,
+      List<String> deletedUuids) {
+    return null;
+  }
+
+  Future disposeContext(String id) {
+    return null;
+  }
+
+  common.Declaration getDeclarationFor(String contextId, String fileUuid, int offset) {
+    return null;
+  }
+
+  Future<Map<String, List<Map>>> buildFiles(List<Map> fileUuids) {
+    return null;
+  }
+
+}
 
 /**
  * Logger specific to this library.
@@ -94,7 +136,7 @@ Future<AnalyzerResult> analyzeString(ChromeDartSdk sdk, String contents) {
   AnalysisContext context = AnalysisEngine.instance.createAnalysisContext();
   context.sourceFactory = new SourceFactory([new DartUriResolver(sdk)]);
 
-  CompilationUnit unit;
+  ast.CompilationUnit unit;
   StringSource source = new StringSource(contents, '<StringSource>');
 
   try {
@@ -114,7 +156,7 @@ Future<AnalyzerResult> analyzeString(ChromeDartSdk sdk, String contents) {
  * A tuple of an AST and a list of errors.
  */
 class AnalyzerResult {
-  final CompilationUnit ast;
+  final ast.CompilationUnit ast;
   final AnalysisErrorInfo errorInfo;
 
   AnalyzerResult(this.ast, this.errorInfo);
@@ -250,7 +292,7 @@ class ChromeDartSdk extends DartSdk {
     Scanner scanner =
         new Scanner(source, new CharSequenceReader(contents), errorListener);
     Parser parser = new Parser(source, errorListener);
-    CompilationUnit unit = parser.parseCompilationUnit(scanner.tokenize());
+    ast.CompilationUnit unit = parser.parseCompilationUnit(scanner.tokenize());
     SdkLibrariesReader_LibraryBuilder libraryBuilder =
         new SdkLibrariesReader_LibraryBuilder(false);
 

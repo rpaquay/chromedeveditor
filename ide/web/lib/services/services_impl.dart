@@ -7,6 +7,7 @@ library spark.services_impl;
 import 'dart:async';
 
 import 'analyzer.dart' as analyzer;
+import 'dart_services.dart';
 import 'services_common.dart';
 import 'compiler.dart';
 import '../dart/sdk.dart';
@@ -212,7 +213,11 @@ class _ServiceContentsProvider implements ContentsProvider {
   }
 }
 
+/**
+ * Forwards
+ */
 class AnalyzerServiceImpl extends ServiceImpl {
+  DartServices _dartServices;
   analyzer.ChromeDartSdk dartSdk;
 
   final Map<String, analyzer.ProjectContext> _contexts = {};
@@ -220,12 +225,13 @@ class AnalyzerServiceImpl extends ServiceImpl {
   AnalyzerServiceImpl(ServicesIsolate isolate, DartSdk sdk) :
       super(isolate, 'analyzer') {
     dartSdk = analyzer.createSdk(sdk);
+    _dartServices = new analyzer.AnalyzerDartServices(dartSdk);
 
+    registerRequestHandler('getOutlineFor', getOutlineFor);
     registerRequestHandler('buildFiles', buildFiles);
     registerRequestHandler('createContext', createContext);
     registerRequestHandler('processContextChanges', processContextChanges);
     registerRequestHandler('disposeContext', disposeContext);
-    registerRequestHandler('getOutlineFor', getOutlineFor);
     registerRequestHandler('getDeclarationFor', getDeclarationFor);
   }
 
@@ -304,9 +310,9 @@ class AnalyzerServiceImpl extends ServiceImpl {
 
   Future<ServiceActionEvent> getOutlineFor(ServiceActionEvent request) {
     var codeString = request.data['string'];
-    return analyzer.analyzeString(dartSdk, codeString).then((result) {
-      return request.createReponse(_getOutline(result.ast).toMap());
-    });
+    return _dartServices
+        .getOutlineFor(codeString)
+        .then((result) => request.createReponse(result.toMap()));
   }
 
   Future<ServiceActionEvent> getDeclarationFor(ServiceActionEvent request) {
@@ -399,180 +405,6 @@ class AnalyzerServiceImpl extends ServiceImpl {
     return "$baseUrl/$libraryName.$className$memberAnchor";
   }
 
-  Outline _getOutline(analyzer.CompilationUnit ast) {
-    Outline outline = new Outline();
-
-    // Ideally, we'd get an AST back, even for very badly formed files.
-    if (ast == null) return outline;
-
-    // TODO(ericarnold): Need to implement modifiers
-    // TODO(ericarnold): Need to implement types
-
-    for (analyzer.Declaration declaration in ast.declarations) {
-      if (declaration is analyzer.TopLevelVariableDeclaration) {
-        _addVariableToOutline(outline, declaration);
-      } else if (declaration is analyzer.FunctionDeclaration) {
-        _addFunctionToOutline(outline, declaration);
-      } else if (declaration is analyzer.ClassDeclaration) {
-        _addClassToOutline(outline, declaration);
-      } else if (declaration is analyzer.TypeAlias) {
-        _addAliasToOutline(outline, declaration);
-      } else {
-        print("${declaration.runtimeType} is unknown");
-      }
-    }
-
-    return outline;
-  }
-
-  String _getSetterTypeFromParams(analyzer.FormalParameterList parameters) {
-    // Only show type of first [analyzer.SimpleFormalParameter] of setter.
-    if (parameters.parameters.length > 0) {
-      analyzer.FormalParameter param = parameters.parameters.first;
-      if (param is analyzer.SimpleFormalParameter) {
-        return _getTypeNameString(param.type);
-      }
-    }
-
-    return null;
-  }
-
-  void _addVariableToOutline(Outline outline,
-      analyzer.TopLevelVariableDeclaration declaration) {
-    analyzer.VariableDeclarationList variables = declaration.variables;
-
-    for (analyzer.VariableDeclaration variable in variables.variables) {
-      outline.entries.add(_populateOutlineEntry(
-          new OutlineTopLevelVariable(variable.name.name,
-              _getTypeNameString(variables.type)),
-          new _Range.fromAstNode(declaration),
-          new _Range.fromAstNode(declaration)));
-    }
-  }
-
-  void _addFunctionToOutline(Outline outline,
-      analyzer.FunctionDeclaration declaration) {
-    analyzer.SimpleIdentifier nameNode = declaration.name;
-    _Range nameRange = new _Range.fromAstNode(nameNode);
-    _Range bodyRange = new _Range.fromAstNode(declaration);
-    String name = nameNode.name;
-
-    if (declaration.isGetter) {
-      outline.entries.add(_populateOutlineEntry(
-          new OutlineTopLevelAccessor(name, _getTypeNameString(declaration.returnType)),
-          nameRange, bodyRange));
-    } else if (declaration.isSetter) {
-      analyzer.FormalParameterList params =
-          declaration.functionExpression.parameters;
-      outline.entries.add(_populateOutlineEntry(
-          new OutlineTopLevelAccessor(name,
-              _getSetterTypeFromParams(params), true),
-          nameRange, bodyRange));
-    } else {
-      outline.entries.add(_populateOutlineEntry(
-          new OutlineTopLevelFunction(name,
-              _getTypeNameString(declaration.returnType)),
-              nameRange, bodyRange));
-    }
-  }
-
-  void _addClassToOutline(Outline outline,
-      analyzer.ClassDeclaration declaration) {
-    OutlineClass outlineClass = new OutlineClass(declaration.name.name);
-    outline.entries.add(
-        _populateOutlineEntry(outlineClass,
-                              new _Range.fromAstNode(declaration.name),
-                              new _Range.fromAstNode(declaration)));
-
-    for (analyzer.ClassMember member in declaration.members) {
-      if (member is analyzer.MethodDeclaration) {
-        _addMethodToOutlineClass(outlineClass, member);
-      } else if (member is analyzer.FieldDeclaration) {
-        _addFieldToOutlineClass(outlineClass, member);
-      } else if (member is analyzer.ConstructorDeclaration) {
-        _addConstructorToOutlineClass(outlineClass, member, declaration);
-      }
-    }
-  }
-
-  void _addAliasToOutline(Outline outline, analyzer.TypeAlias declaration) {
-    analyzer.SimpleIdentifier nameNode;
-
-    if (declaration is analyzer.ClassTypeAlias) {
-      nameNode = declaration.name;
-    } else if (declaration is analyzer.FunctionTypeAlias) {
-      nameNode = declaration.name;
-    } else {
-      throw "TypeAlias subclass ${declaration.runtimeType} is unknown";
-    }
-
-    String name = nameNode.name;
-
-    outline.entries.add(_populateOutlineEntry(new OutlineTypeDef(name),
-        new _Range.fromAstNode(nameNode), new _Range.fromAstNode(declaration)));
-  }
-
-  void _addMethodToOutlineClass(OutlineClass outlineClass,
-      analyzer.MethodDeclaration member) {
-
-    if (member.isGetter) {
-      outlineClass.members.add(_populateOutlineEntry(
-          new OutlineClassAccessor(member.name.name,
-              _getTypeNameString(member.returnType)),
-          new _Range.fromAstNode(member.name),
-          new _Range.fromAstNode(member)));
-    } else if (member.isSetter) {
-      outlineClass.members.add(_populateOutlineEntry(
-          new OutlineClassAccessor(member.name.name,
-              _getSetterTypeFromParams(member.parameters), true),
-          new _Range.fromAstNode(member.name),
-          new _Range.fromAstNode(member)));
-    } else {
-      outlineClass.members.add(_populateOutlineEntry(
-          new OutlineMethod(member.name.name, _getTypeNameString(member.returnType)),
-          new _Range.fromAstNode(member.name),
-          new _Range.fromAstNode(member)));
-    }
-  }
-
-  void _addFieldToOutlineClass(OutlineClass outlineClass,
-      analyzer.FieldDeclaration member) {
-    analyzer.VariableDeclarationList fields = member.fields;
-    for (analyzer.VariableDeclaration field in fields.variables) {
-      outlineClass.members.add(_populateOutlineEntry(
-          new OutlineProperty(field.name.name, _getTypeNameString(fields.type)),
-          new _Range.fromAstNode(field),
-          new _Range.fromAstNode(field.parent)));
-    }
-  }
-
-  void _addConstructorToOutlineClass(OutlineClass outlineClass,
-      analyzer.ConstructorDeclaration member,
-      analyzer.ClassDeclaration classDeclaration) {
-    analyzer.ConstructorDeclaration constructor = member;
-
-    var nameIdentifier = constructor.name;
-    String name = classDeclaration.name.name +
-        (nameIdentifier != null ? ".${nameIdentifier.name}" : "");
-    _Range nameRange = new _Range(constructor.beginToken.offset,
-        nameIdentifier == null ? constructor.beginToken.end :
-        nameIdentifier.end);
-
-    outlineClass.members.add(_populateOutlineEntry(
-        new OutlineMethod(name),
-        nameRange,
-        new _Range.fromAstNode(classDeclaration)));
-  }
-
-  OutlineEntry _populateOutlineEntry(OutlineEntry outlineEntry, _Range name,
-      _Range body) {
-    outlineEntry.nameStartOffset = name.startOffset;
-    outlineEntry.nameEndOffset = name.endOffset;
-    outlineEntry.bodyStartOffset = body.startOffset;
-    outlineEntry.bodyEndOffset = body.endOffset;
-    return outlineEntry;
-  }
-
   int _errorSeverityToInt(analyzer.ErrorSeverity severity) {
     if (severity == analyzer.ErrorSeverity.ERROR) {
       return ErrorSeverity.ERROR;
@@ -592,17 +424,6 @@ class AnalyzerServiceImpl extends ServiceImpl {
     return isolate.chromeService.getFileContents(fileUuid)
         .then((String contents) => analyzer.analyzeString(sdk, contents))
         .then((analyzer.AnalyzerResult result) => result);
-  }
-}
-
-class _Range {
-  int startOffset = null;
-  int endOffset = null;
-
-  _Range(this.startOffset, this.endOffset);
-  _Range.fromAstNode(analyzer.AstNode node) {
-    startOffset = node.offset;
-    endOffset = node.end;
   }
 }
 
@@ -692,17 +513,4 @@ abstract class ServiceImpl {
       }
     }
   }
-}
-
-String _getTypeNameString(analyzer.TypeName typeName) {
-  if (typeName == null) return null;
-
-  analyzer.Identifier identifier = typeName.name;
-  if (identifier == null) return null;
-
-  String name = identifier.name;
-  if (name == null) return null;
-
-  int index = name.lastIndexOf('.');
-  return index == -1 ? name : name.substring(index + 1);
 }
