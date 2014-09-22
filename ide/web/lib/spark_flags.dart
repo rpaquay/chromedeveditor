@@ -52,8 +52,10 @@ class SparkFlags {
       _flags['enable-git-pull'] == true;
 
   // Dart Builder
-  static bool get useAnalysisServer =>
-      _flags['enable-analysis-server'] == true;
+  static bool get dartRunServicesInDomThread =>
+      _flags['dart-run-services-in-dom-thread'] == true;
+  static bool get dartUseAnalysisServer =>
+      _flags['dart-enable-analysis-server'] == true;
 
   /**
    * Add new flags to the set, possibly overwriting the existing values.
