@@ -31,9 +31,9 @@ class Services {
 
   Services(this._workspace, this._packageManager, {bool runInDomThread: false}) {
     if (runInDomThread) {
-      _workerHandler = services_bootstrap_isolate.createHostToWorkerHandler();
-    } else {
       _workerHandler = services_bootstrap_single_thread.createHostToWorkerHandler();
+    } else {
+      _workerHandler = services_bootstrap_isolate.createHostToWorkerHandler();
     }
     registerService(new CompilerService(this, _workerHandler));
     registerService(new AnalyzerService(this, _workerHandler));
