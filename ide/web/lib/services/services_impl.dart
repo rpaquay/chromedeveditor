@@ -312,7 +312,7 @@ class AnalyzerServiceImpl extends ServiceImpl {
     var codeString = request.data['string'];
     return _dartServices
         .getOutlineFor(codeString)
-        .then((result) => request.createReponse(result.toMap()));
+        .then((Outline result) => request.createReponse(result.toMap()));
   }
 
   Future<ServiceActionEvent> getDeclarationFor(ServiceActionEvent request) {
