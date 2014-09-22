@@ -51,6 +51,10 @@ class SparkFlags {
   static bool get gitPull =>
       _flags['enable-git-pull'] == true;
 
+  // Dart Builder
+  static bool get useAnalysisServer =>
+      _flags['enable-analysis-server'] == true;
+
   /**
    * Add new flags to the set, possibly overwriting the existing values.
    * Maps are treated specially, updating the top-level map entries rather
