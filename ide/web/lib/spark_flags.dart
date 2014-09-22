@@ -51,7 +51,7 @@ class SparkFlags {
   static bool get gitPull =>
       _flags['enable-git-pull'] == true;
 
-  // Dart Builder
+  // Dart services
   static bool get dartRunServicesInDomThread =>
       _flags['dart-run-services-in-dom-thread'] == true;
   static bool get dartUseAnalysisServer =>

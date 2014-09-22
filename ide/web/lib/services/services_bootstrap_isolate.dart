@@ -2,7 +2,7 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-library spark.services_bootstrap;
+library spark.services_bootstrap_isolate;
 
 import 'dart:async';
 import 'dart:isolate';
@@ -10,7 +10,7 @@ import 'dart:isolate';
 import 'services_common.dart';
 
 HostToWorkerHandler createHostToWorkerHandler() {
-  return new _IsolateHostToWorkerHandler();  
+  return new _IsolateHostToWorkerHandler();
 }
 
 /**
@@ -26,13 +26,13 @@ class _IsolateHostToWorkerHandler implements HostToWorkerHandler {
   int _topCallId = 0;
   Isolate _isolate;
   SendPort _sendPort;
-  
+
   @override
   Stream<ServiceActionEvent> onWorkerMessage;
 
   @override
   Future onceWorkerReady;
-  
+
   _IsolateHostToWorkerHandler() {
     onceWorkerReady = _readyController.stream.first;
     _startIsolate().then((result) => _isolate = result);

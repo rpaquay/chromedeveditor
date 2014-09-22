@@ -296,7 +296,10 @@ abstract class Spark
   }
 
   void initServices() {
-    services = new Services(this.workspace, pubManager);
+    services = new Services(
+        this.workspace,
+        pubManager,
+        runInDomThread: SparkFlags.dartRunServicesInDomThread);
   }
 
   void initEventBus() {

@@ -10,7 +10,8 @@ import 'package:logging/logging.dart';
 
 import 'package_mgmt/package_manager.dart';
 import 'services/services_common.dart';
-import 'services/services_bootstrap.dart' as bootstrap;
+import 'services/services_bootstrap_isolate.dart' as services_bootstrap_isolate;
+import 'services/services_bootstrap_single_thread.dart' as services_bootstrap_single_thread;
 import 'utils.dart';
 import 'workspace.dart';
 
@@ -28,8 +29,12 @@ class Services {
   final Workspace _workspace;
   final PackageManager _packageManager;
 
-  Services(this._workspace, this._packageManager) {
-    _workerHandler = bootstrap.createHostToWorkerHandler();
+  Services(this._workspace, this._packageManager, {bool runInDomThread: false}) {
+    if (runInDomThread) {
+      _workerHandler = services_bootstrap_isolate.createHostToWorkerHandler();
+    } else {
+      _workerHandler = services_bootstrap_single_thread.createHostToWorkerHandler();
+    }
     registerService(new CompilerService(this, _workerHandler));
     registerService(new AnalyzerService(this, _workerHandler));
     registerService(new TestService(this, _workerHandler));
