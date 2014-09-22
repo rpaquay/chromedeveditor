@@ -25,7 +25,7 @@ abstract class DartServices {
   /**
    * Adds/changes/removes files from the given context [contextId].
    */
-  Future<ServiceActionEvent> processContextChanges(
+  Future<AnalysisResultUuid> processContextChanges(
       String contextId,
       List<String> addedUuids,
       List<String> changedUuids,
@@ -40,7 +40,7 @@ abstract class DartServices {
    * Returns a [Declaration] (or `null`) corresponding to the declaration in the
    * source files [fileUuid] at [offset].
    */
-  Declaration getDeclarationFor(String contextId, String fileUuid, int offset);
+  Future<Declaration> getDeclarationFor(String contextId, String fileUuid, int offset);
 
   /**
    * Returns a mapping from file uuids to list of errors for the list of files
@@ -48,3 +48,29 @@ abstract class DartServices {
    */
   Future<Map<String, List<Map>>> buildFiles(List<Map> fileUuids);
 }
+
+class AnalysisResultUuid {
+  /**
+   * A Map from file uuids to list of associated errors.
+   */
+  final Map<String, List<AnalysisError>> _errorMap = {};
+
+  AnalysisResultUuid();
+
+  void addErrors(String uuid, List<AnalysisError> errors) {
+    // Ignore warnings from imported packages.
+    if (!uuid.startsWith('package:')) {
+      _errorMap[uuid] = errors;
+    }
+  }
+
+  Map toMap() {
+    Map m = {};
+    _errorMap.forEach((String uuid, List<AnalysisError> errors) {
+      m[uuid] = errors.map((e) => e.toMap()).toList();
+    });
+    return m;
+  }
+}
+
+

@@ -10,6 +10,7 @@ library spark.analyzer;
 import 'dart:async';
 
 import 'package:analyzer/src/generated/ast.dart' as ast;
+import 'package:analyzer/src/generated/element.dart' as elements;
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/error.dart';
 import 'package:analyzer/src/generated/parser.dart';
@@ -32,39 +33,140 @@ import '../dart/sdk.dart' as sdk;
  */
 class AnalyzerDartServices implements DartServices {
   final DartSdk dartSdk;
+  final common.ContentsProvider _contentsProvider;
+  final Map<String, ProjectContext> _contexts = {};
 
-  AnalyzerDartServices(this.dartSdk);
+  AnalyzerDartServices(this.dartSdk, this._contentsProvider);
 
+  @override
   Future<common.Outline> getOutlineFor(String codeString) {
     return analyzeString(dartSdk, codeString).then((AnalyzerResult result) {
       return new OutlineBuilder().Build(result.ast);
     });
   }
 
+  @override
   Future createContext(String id) {
-    return null;
+    _contexts[id] = new ProjectContext(id, dartSdk, _contentsProvider);
+    return new Future.value(null);
   }
 
-  Future processContextChanges(
-      String contextId,
+  @override
+  Future<AnalysisResultUuid> processContextChanges(
+      String id,
       List<String> addedUuids,
       List<String> changedUuids,
       List<String> deletedUuids) {
-    return null;
+    ProjectContext context = _contexts[id];
+
+    if (context == null) {
+      return new Future.error('no context associated with id ${id}');
+    }
+
+    return context.processChanges(addedUuids, changedUuids, deletedUuids);
   }
 
+  @override
   Future disposeContext(String id) {
-    return null;
+    _contexts.remove(id);
+    return new Future.value(null);
   }
 
-  common.Declaration getDeclarationFor(String contextId, String fileUuid, int offset) {
-    return null;
+  @override
+  Future<common.Declaration> getDeclarationFor(String contextId, String fileUuid, int offset) {
+    ProjectContext context = _contexts[contextId];
+
+    if (context == null) {
+      return new Future.error('no context associated with id ${contextId}');
+    }
+
+    common.Declaration declaration = _getDeclarationFor(context, fileUuid, offset);
+    return new Future.value(declaration);
   }
 
   Future<Map<String, List<Map>>> buildFiles(List<Map> fileUuids) {
     return null;
   }
 
+  common.Declaration _getDeclarationFor(
+      ProjectContext context, String fileUuid, int offset) {
+    WorkspaceSource source = context.getSource(fileUuid);
+
+    List<Source> librarySources =
+        context.context.getLibrariesContaining(source);
+
+    if (librarySources.isEmpty) return null;
+
+    ast.CompilationUnit compilationUnit =
+        context.context.resolveCompilationUnit2(source, librarySources[0]);
+
+    ast.AstNode node =
+        new ast.NodeLocator.con1(offset).searchWithin(compilationUnit);
+
+    // Handle import and export directives.
+    if (node is ast.SimpleStringLiteral &&
+        node.parent is ast.NamespaceDirective) {
+      ast.SimpleStringLiteral literal = node;
+      ast.NamespaceDirective directive = node.parent;
+      if (directive.source is WorkspaceSource) {
+        WorkspaceSource fileSource = directive.source;
+        return new common.SourceDeclaration(literal.value, fileSource.uuid, 0, 0);
+      } else {
+        // TODO(ericarnold): Handle SDK import
+        return null;
+      }
+    }
+
+    if (node is! ast.SimpleIdentifier) return null;
+
+    elements.Element element = ast.ElementLocator.locate(node);
+    if (element == null) return null;
+
+    if (element.nameOffset == -1) {
+      if (element is elements.ConstructorElement) {
+        elements.ConstructorElement constructorElement = element;
+        element = constructorElement.enclosingElement;
+      } else if (element.source == null) {
+        return null;
+      }
+    }
+
+    if (element.source is WorkspaceSource) {
+      WorkspaceSource fileSource = element.source;
+      return new common.SourceDeclaration(element.displayName, fileSource.uuid,
+          element.nameOffset, element.name.length);
+    } else if (element.source is SdkSource) {
+      String url = _getUrlForElement(element);
+      if (url == null) return null;
+      return new common.DocDeclaration(element.displayName, url);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Convert a dart: library reference into the corresponding dartdoc url.
+   */
+  String _getUrlForElement(elements.Element element) {
+    SdkSource sdkSource = element.source;
+    String libraryName = element.library.name.replaceAll(".", "-");
+    String baseUrl =
+        "https://api.dartlang.org/apidocs/channels/stable/dartdoc-viewer";
+    String className;
+    String memberAnchor = "";
+    elements.Element enclosingElement = element.enclosingElement;
+    if (element is elements.ClassElement) {
+      className = element.name;
+    } else if (enclosingElement is elements.ClassElement) {
+      className = enclosingElement.name;
+      memberAnchor = "#id_${element.name}";
+    } else {
+      // TODO: Top level variables and functions
+      return null;
+    }
+
+    return "$baseUrl/$libraryName.$className$memberAnchor";
+  }
 }
 
 /**
@@ -167,30 +269,6 @@ class AnalyzerResult {
     errorInfo.lineInfo.getLocation(error.offset);
 
   String toString() => 'AnalyzerResult[${errorInfo.errors.length} issues]';
-}
-
-class AnalysisResultUuid {
-  /**
-   * A Map from file uuids to list of associated errors.
-   */
-  final Map<String, List<common.AnalysisError>> _errorMap = {};
-
-  AnalysisResultUuid();
-
-  void addErrors(String uuid, List<common.AnalysisError> errors) {
-    // Ignore warnings from imported packages.
-    if (!uuid.startsWith('package:')) {
-      _errorMap[uuid] = errors;
-    }
-  }
-
-  Map toMap() {
-    Map m = {};
-    _errorMap.forEach((String uuid, List<common.AnalysisError> errors) {
-      m[uuid] = errors.map((e) => e.toMap()).toList();
-    });
-    return m;
-  }
 }
 
 /**

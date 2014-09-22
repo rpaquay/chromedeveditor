@@ -2,16 +2,15 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/**
- * This library is an entry-point to the Dart analyzer package.
- */
 library spark.outline_builder;
-
 
 import 'package:analyzer/src/generated/ast.dart' as ast;
 
 import 'services_common.dart';
 
+/**
+ * Utility class to build [Outline] instances.
+ */
 class OutlineBuilder {
   /**
    * Builds an [Outline] instance from a [ast.CompilationUnit] instance.

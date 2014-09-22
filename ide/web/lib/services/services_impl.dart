@@ -220,12 +220,11 @@ class AnalyzerServiceImpl extends ServiceImpl {
   DartServices _dartServices;
   analyzer.ChromeDartSdk dartSdk;
 
-  final Map<String, analyzer.ProjectContext> _contexts = {};
-
   AnalyzerServiceImpl(ServicesIsolate isolate, DartSdk sdk) :
       super(isolate, 'analyzer') {
     dartSdk = analyzer.createSdk(sdk);
-    _dartServices = new analyzer.AnalyzerDartServices(dartSdk);
+    _dartServices = new analyzer.AnalyzerDartServices(
+        dartSdk, new _ServiceContentsProvider(isolate.chromeService));
 
     registerRequestHandler('getOutlineFor', getOutlineFor);
     registerRequestHandler('buildFiles', buildFiles);
@@ -277,9 +276,9 @@ class AnalyzerServiceImpl extends ServiceImpl {
 
   Future<ServiceActionEvent> createContext(ServiceActionEvent request) {
     String id = request.data['contextId'];
-    _contexts[id] = new analyzer.ProjectContext(id, dartSdk,
-        new _ServiceContentsProvider(isolate.chromeService));
-    return new Future.value(request.createReponse());
+    return _dartServices
+      .createContext(id)
+      .then((_) => request.createReponse());
   }
 
   Future<ServiceActionEvent> processContextChanges(ServiceActionEvent request) {
@@ -289,23 +288,15 @@ class AnalyzerServiceImpl extends ServiceImpl {
     List<String> changedUuids = request.data['changed'];
     List<String> deletedUuids = request.data['deleted'];
 
-    analyzer.ProjectContext context = _contexts[id];
-
-    if (context != null) {
-      return context.processChanges(addedUuids, changedUuids,
-          deletedUuids).then((analyzer.AnalysisResultUuid result) {
-        return new Future.value(request.createReponse(result.toMap()));
-      });
-    } else {
-      return new Future.value(
-          request.createErrorReponse('no context associated with id ${id}'));
-    }
+    return _dartServices
+      .processContextChanges(id, addedUuids, changedUuids, deletedUuids)
+      .catchError((error) => request.createErrorReponse(error), test: (e) => e is String)
+      .then((AnalysisResultUuid result) => request.createReponse(result.toMap()));
   }
 
   Future<ServiceActionEvent> disposeContext(ServiceActionEvent request) {
     String id = request.data['contextId'];
-    _contexts.remove(id);
-    return new Future.value(request.createReponse());
+    return _dartServices.disposeContext(id);
   }
 
   Future<ServiceActionEvent> getOutlineFor(ServiceActionEvent request) {
@@ -316,95 +307,18 @@ class AnalyzerServiceImpl extends ServiceImpl {
   }
 
   Future<ServiceActionEvent> getDeclarationFor(ServiceActionEvent request) {
-    analyzer.ProjectContext context = _contexts[request.data['contextId']];
+    String contextId = request.data['contextId'];
     String fileUuid = request.data['fileUuid'];
     int offset = request.data['offset'];
 
-    Declaration declaration = _getDeclarationFor(context, fileUuid, offset);
-    return new Future.value(request.createReponse(
-        declaration != null ? declaration.toMap() : null));
+    return _dartServices
+      .getDeclarationFor(contextId, fileUuid, offset)
+      .catchError((error) => request.createErrorReponse(error), test: (e) => e is String)
+      .then((Declaration declaration) {
+        Map map = (declaration == null ? null : declaration.toMap());
+        request.createReponse(map);
+      });
   }
-
-  Declaration _getDeclarationFor(analyzer.ProjectContext context,
-      String fileUuid, int offset) {
-    analyzer.WorkspaceSource source = context.getSource(fileUuid);
-
-    List<analyzer.Source> librarySources =
-        context.context.getLibrariesContaining(source);
-
-    if (librarySources.isEmpty) return null;
-
-    analyzer.CompilationUnit ast =
-        context.context.resolveCompilationUnit2(source, librarySources[0]);
-
-    analyzer.AstNode node =
-        new analyzer.NodeLocator.con1(offset).searchWithin(ast);
-
-    // Handle import and export directives.
-    if (node is analyzer.SimpleStringLiteral &&
-        node.parent is analyzer.NamespaceDirective) {
-      analyzer.SimpleStringLiteral literal = node;
-      analyzer.NamespaceDirective directive = node.parent;
-      if (directive.source is analyzer.WorkspaceSource) {
-        analyzer.WorkspaceSource fileSource = directive.source;
-        return new SourceDeclaration(literal.value, fileSource.uuid, 0, 0);
-      } else {
-        // TODO(ericarnold): Handle SDK import
-        return null;
-      }
-    }
-
-    if (node is! analyzer.SimpleIdentifier) return null;
-
-    analyzer.Element element = analyzer.ElementLocator.locate(node);
-    if (element == null) return null;
-
-    if (element.nameOffset == -1) {
-      if (element is analyzer.ConstructorElement) {
-        analyzer.ConstructorElement constructorElement = element;
-        element = constructorElement.enclosingElement;
-      } else if (element.source == null) {
-        return null;
-      }
-    }
-
-    if (element.source is analyzer.WorkspaceSource) {
-      analyzer.WorkspaceSource fileSource = element.source;
-      return new SourceDeclaration(element.displayName, fileSource.uuid,
-          element.nameOffset, element.name.length);
-    } else if (element.source is analyzer.SdkSource) {
-      String url = _getUrlForElement(element);
-      if (url == null) return null;
-      return new DocDeclaration(element.displayName, url);
-    } else {
-      return null;
-    }
-  }
-
-  /**
-   * Convert a dart: library reference into the corresponding dartdoc url.
-   */
-  String _getUrlForElement(analyzer.Element element) {
-    analyzer.SdkSource sdkSource = element.source;
-    String libraryName = element.library.name.replaceAll(".", "-");
-    String baseUrl =
-        "https://api.dartlang.org/apidocs/channels/stable/dartdoc-viewer";
-    String className;
-    String memberAnchor = "";
-    analyzer.Element enclosingElement = element.enclosingElement;
-    if (element is analyzer.ClassElement) {
-      className = element.name;
-    } else if (enclosingElement is analyzer.ClassElement) {
-      className = enclosingElement.name;
-      memberAnchor = "#id_${element.name}";
-    } else {
-      // TODO: Top level variables and functions
-      return null;
-    }
-
-    return "$baseUrl/$libraryName.$className$memberAnchor";
-  }
-
   int _errorSeverityToInt(analyzer.ErrorSeverity severity) {
     if (severity == analyzer.ErrorSeverity.ERROR) {
       return ErrorSeverity.ERROR;
