@@ -7,6 +7,7 @@ library spark.services_impl;
 import 'dart:async';
 
 import 'analyzer.dart' as analyzer;
+import 'analysis_server.dart' as analysis_server;
 import 'dart_services.dart';
 import 'services_common.dart';
 import 'compiler.dart';
@@ -76,8 +77,7 @@ class ServicesIsolate {
         _registerServiceImpl(new CompilerServiceImpl(sdk, contentsProvider));
 
         DartServices dartServices = dartUseAnalysisServer ?
-            //TODO(rpaquay) new analysis_server.DartServices(sdk, contentsProvider);
-            throw "Not yet implemented" :
+            new analysis_server.AnalysisServerDartServices(sdk, contentsProvider):
             new analyzer.AnalyzerDartServices(sdk, contentsProvider);
         _registerServiceImpl(new AnalyzerServiceImpl(dartServices));
 
