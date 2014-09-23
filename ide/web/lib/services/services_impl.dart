@@ -99,18 +99,13 @@ class ServicesIsolate {
     _serviceImplsById[serviceImplementation.serviceId] = serviceImplementation;
   }
 
-  Future<ServiceActionEvent> _handleMessage(ServiceActionEvent event) {
-    Completer<ServiceActionEvent> completer = new Completer<ServiceActionEvent>();
-
+  void _handleMessage(ServiceActionEvent event) {
     ServiceImpl service = getServiceImpl(event.serviceId);
     service.handleEvent(event).then((ServiceActionEvent responseEvent) {
       if (responseEvent != null) {
         _sendResponse(responseEvent);
-        completer.complete();
       }
     });
-
-    return completer.future;
   }
 
   // Sends a response message.
