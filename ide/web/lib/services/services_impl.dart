@@ -67,14 +67,22 @@ class ServicesIsolate {
       }
     });
 
-    chromeService.getAppContents('packages/spark/sdk/dart-sdk.bz').then(
-        (List<int> sdkContents) {
-      sdk = DartSdk.createSdkFromContents(sdkContents);
+    chromeService.dartUseAnalysisServer.then((bool dartUseAnalysisServer) {
+      chromeService.getAppContents('packages/spark/sdk/dart-sdk.bz').then(
+          (List<int> sdkContents) {
+        sdk = DartSdk.createSdkFromContents(sdkContents);
+        ContentsProvider contentsProvider = new _ServiceContentsProvider(chromeService);
 
-      _registerServiceImpl(new CompilerServiceImpl(this, sdk));
-      _registerServiceImpl(new AnalyzerServiceImpl(this, sdk));
+        _registerServiceImpl(new CompilerServiceImpl(sdk, contentsProvider));
 
-      onHostMessage.listen((ServiceActionEvent event) => _handleMessage(event));
+        DartServices dartServices = dartUseAnalysisServer ?
+            new analyzer.AnalyzerDartServices(sdk, contentsProvider) :
+            //TODO(rpaquay) new analysis_server.DartServices(sdk, contentsProvider);
+            throw "Not yet implemented";
+        _registerServiceImpl(new AnalyzerServiceImpl(dartServices));
+
+        onHostMessage.listen((ServiceActionEvent event) => _handleMessage(event));
+      });
     });
   }
 
@@ -135,11 +143,16 @@ class ServicesIsolate {
 }
 
 class TestServiceImpl extends ServiceImpl {
-  TestServiceImpl(ServicesIsolate isolate) : super(isolate, 'test') {
+  final ServicesIsolate isolate;
+
+  TestServiceImpl(this.isolate) {
     registerRequestHandler('shortTest', shortTest);
     registerRequestHandler('longTest', longTest);
     registerRequestHandler('readText', readText);
   }
+
+  @override
+  String get serviceId => 'test';
 
   Future<ServiceActionEvent> shortTest(ServiceActionEvent request) {
     Map map = {"response": "short${request.data['name']}"};
@@ -162,24 +175,25 @@ class TestServiceImpl extends ServiceImpl {
 }
 
 class CompilerServiceImpl extends ServiceImpl {
-  final DartSdk sdk;
-  Compiler compiler;
+  final Compiler compiler;
 
-  CompilerServiceImpl(ServicesIsolate isolate, this.sdk) :
-      super(isolate, 'compiler') {
-
-    compiler = Compiler.createCompilerFrom(sdk,
-        new _ServiceContentsProvider(isolate.chromeService));
-
+  CompilerServiceImpl(DartSdk sdk, ContentsProvider contentsProvider)
+    : compiler = Compiler.createCompilerFrom(sdk, contentsProvider) {
     registerRequestHandler('compileString', compileString);
     registerRequestHandler('compileFile', compileFile);
   }
 
+  @override
+  String get serviceId => 'compiler';
+
   Future<ServiceActionEvent> compileString(ServiceActionEvent request) {
     String string = request.data['string'];
-    return compiler.compileString(string).then((CompilerResultHolder result) {
-      return new Future.value(request.createReponse(result.toMap()));
-    });
+
+    return compiler
+        .compileString(string)
+        .then((CompilerResultHolder result) {
+          return new Future.value(request.createReponse(result.toMap()));
+        });
   }
 
   Future<ServiceActionEvent> compileFile(ServiceActionEvent request) {
@@ -187,9 +201,11 @@ class CompilerServiceImpl extends ServiceImpl {
     String project = request.data['project'];
     bool csp = request.data['csp'];
 
-    return compiler.compileFile(fileUuid, csp: csp).then((CompilerResultHolder result) {
-      return new Future.value(request.createReponse(result.toMap()));
-    });
+    return compiler
+        .compileFile(fileUuid, csp: csp)
+        .then((CompilerResultHolder result) {
+          return new Future.value(request.createReponse(result.toMap()));
+        });
   }
 }
 
@@ -214,16 +230,16 @@ class _ServiceContentsProvider implements ContentsProvider {
 class AnalyzerServiceImpl extends ServiceImpl {
   final DartServices _dartServices;
 
-  AnalyzerServiceImpl(ServicesIsolate isolate, DartSdk sdk)
-    : _dartServices = new analyzer.AnalyzerDartServices(
-          sdk, new _ServiceContentsProvider(isolate.chromeService)),
-      super(isolate, 'analyzer') {
+  AnalyzerServiceImpl(this._dartServices) {
     registerRequestHandler('getOutlineFor', getOutlineFor);
     registerRequestHandler('createContext', createContext);
     registerRequestHandler('processContextChanges', processContextChanges);
     registerRequestHandler('disposeContext', disposeContext);
     registerRequestHandler('getDeclarationFor', getDeclarationFor);
   }
+
+  @override
+  String get serviceId => 'analyzer';
 
   Future<ServiceActionEvent> createContext(ServiceActionEvent request) {
     String id = request.data['contextId'];
@@ -310,6 +326,11 @@ class ChromeService {
     return _sendAction(event).then((event) => event.data["contents"]);
   }
 
+  Future<bool> get dartUseAnalysisServer {
+    var event = _createNewEvent("getFlag_dartUseAnalysisServer");
+    return _sendAction(event).then((event) => event.data["value"]);
+  }
+
   Future<ServiceActionEvent> _sendAction(ServiceActionEvent event,
       [bool expectResponse = false]) {
     return _isolate._sendAction(event, expectResponse).
@@ -329,12 +350,7 @@ class ChromeService {
  * Provides an abstract class and helper code for service implementations.
  */
 abstract class ServiceImpl {
-  final String serviceId;
-  final ServicesIsolate isolate;
-
   Map<String, RequestHandler> _responders = {};
-
-  ServiceImpl(this.isolate, this.serviceId);
 
   void registerRequestHandler(String methodName, RequestHandler responder) {
     _responders[methodName] = responder;
@@ -358,4 +374,6 @@ abstract class ServiceImpl {
       }
     }
   }
+
+  String get serviceId;
 }

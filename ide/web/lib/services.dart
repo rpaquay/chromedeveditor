@@ -12,6 +12,7 @@ import 'package_mgmt/package_manager.dart';
 import 'services/services_common.dart';
 import 'services/services_bootstrap_isolate.dart' as services_bootstrap_isolate;
 import 'services/services_bootstrap_single_thread.dart' as services_bootstrap_single_thread;
+import 'spark_flags.dart';
 import 'utils.dart';
 import 'workspace.dart';
 
@@ -418,6 +419,9 @@ class ChromeServiceImpl extends Service {
           return packageFile.getContents().then((String contents) {
             return _sendResponse(event, {"contents": contents});
           });
+        case "getFlag_dartUseAnalysisServer":
+          bool value = SparkFlags.dartUseAnalysisServer;
+          return _sendResponse(event, {"value": value});
         default:
           throw "Unknown action '${event.actionId}' sent to Chrome service.";
       }

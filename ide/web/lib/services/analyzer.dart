@@ -29,7 +29,7 @@ import 'dart_services.dart';
 import '../dart/sdk.dart' as sdk;
 
 /**
- * Implementatio of [DartServices] using the [analyzer] package.
+ * Implementation of [DartServices] using the [analyzer] package.
  */
 class AnalyzerDartServices implements DartServices {
   final ChromeDartSdk dartSdk;
@@ -44,7 +44,7 @@ class AnalyzerDartServices implements DartServices {
   @override
   Future<common.Outline> getOutlineFor(String codeString) {
     return analyzeString(dartSdk, codeString).then((AnalyzerResult result) {
-      return new OutlineBuilder().Build(result.ast);
+      return new OutlineBuilder().build(result.ast);
     });
   }
 
@@ -83,11 +83,13 @@ class AnalyzerDartServices implements DartServices {
       return new Future.error('no context associated with id ${contextId}');
     }
 
-    common.Declaration declaration = _getDeclarationFor(context, fileUuid, offset);
+    common.Declaration declaration = new DeclarationBuilder().build(context, fileUuid, offset);
     return new Future.value(declaration);
   }
+}
 
-  common.Declaration _getDeclarationFor(
+class DeclarationBuilder {
+  common.Declaration build(
       ProjectContext context, String fileUuid, int offset) {
     WorkspaceSource source = context.getSource(fileUuid);
 

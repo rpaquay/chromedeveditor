@@ -15,7 +15,7 @@ class OutlineBuilder {
   /**
    * Builds an [Outline] instance from a [ast.CompilationUnit] instance.
    */
-  Outline Build(ast.CompilationUnit compilationUnit) {
+  Outline build(ast.CompilationUnit compilationUnit) {
     Outline outline = new Outline();
 
     // Ideally, we'd get an AST back, even for very badly formed files.
