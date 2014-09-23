@@ -272,7 +272,7 @@ class AnalyzerServiceImpl extends ServiceImpl {
       .catchError((error) => request.createErrorReponse(error), test: (e) => e is String)
       .then((Declaration declaration) {
         Map map = (declaration == null ? null : declaration.toMap());
-        request.createReponse(map);
+        return request.createReponse(map);
       });
   }
 }
