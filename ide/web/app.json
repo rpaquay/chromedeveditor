@@ -13,6 +13,6 @@
   },
   "bower-use-git-clone": false,
   "package-files-are-editable": false,
-  "dart-run-services-in-dom-thread":  true,
+  "dart-run-services-in-dom-thread":  false,
   "dart-enable-analysis-server": false
 }

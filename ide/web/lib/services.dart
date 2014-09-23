@@ -193,35 +193,6 @@ class AnalyzerService extends Service {
 
   Workspace get workspace => services._workspace;
 
-  // TODO(devoncarew): We'll want to move away from this method, in favor of the
-  // [ProjectAnalyzer] interface.
-  Future<Map<File, List<AnalysisError>>> buildFiles(List<File> dartFiles) {
-    PackageResolver resolver = null;
-
-    if (dartFiles.isNotEmpty) {
-      resolver = services._packageManager.getResolverFor(dartFiles.first.project);
-    }
-
-    Map args = {
-        "dartFileUuids": _filesToUuid(services._packageManager, resolver, dartFiles)
-    };
-
-    return _sendAction("buildFiles", args).then((ServiceActionEvent event) {
-      Map<String, List<Map>> responseErrors = event.data['errors'];
-      Map<File, List<AnalysisError>> errorsPerFile = {};
-
-      for (String uuid in responseErrors.keys) {
-        List<AnalysisError> errors = responseErrors[uuid].map((Map errorData) =>
-            new AnalysisError.fromMap(errorData)).toList();
-        errorsPerFile[_uuidToFile(uuid)] = errors;
-      }
-
-      return errorsPerFile;
-    });
-  }
-
-  File _uuidToFile(String uuid) => services._workspace.restoreResource(uuid);
-
   Future<Outline> getOutlineFor(String codeString, [String name]) {
     var args = {"string": codeString};
     Stopwatch timer = new Stopwatch()..start();

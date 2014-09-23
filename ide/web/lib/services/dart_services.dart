@@ -41,12 +41,6 @@ abstract class DartServices {
    * source files [fileUuid] at [offset].
    */
   Future<Declaration> getDeclarationFor(String contextId, String fileUuid, int offset);
-
-  /**
-   * Returns a mapping from file uuids to list of errors for the list of files
-   * [fileUuids].
-   */
-  Future<Map<String, List<Map>>> buildFiles(List<Map> fileUuids);
 }
 
 class AnalysisResultUuid {
@@ -72,5 +66,3 @@ class AnalysisResultUuid {
     return m;
   }
 }
-
-

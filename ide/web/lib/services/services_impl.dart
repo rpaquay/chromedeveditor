@@ -224,19 +224,10 @@ class AnalyzerServiceImpl extends ServiceImpl {
           sdk, new _ServiceContentsProvider(isolate.chromeService)),
       super(isolate, 'analyzer') {
     registerRequestHandler('getOutlineFor', getOutlineFor);
-    registerRequestHandler('buildFiles', buildFiles);
     registerRequestHandler('createContext', createContext);
     registerRequestHandler('processContextChanges', processContextChanges);
     registerRequestHandler('disposeContext', disposeContext);
     registerRequestHandler('getDeclarationFor', getDeclarationFor);
-  }
-
-  Future<ServiceActionEvent> buildFiles(ServiceActionEvent request) {
-    List<Map> fileUuids = request.data["dartFileUuids"];
-    return _dartServices
-      .buildFiles(fileUuids)
-      .catchError((error) => request.createErrorReponse(error), test: (e) => e is String)
-      .then((errorsPerFile) => request.createReponse({"errors": errorsPerFile}));
   }
 
   Future<ServiceActionEvent> createContext(ServiceActionEvent request) {

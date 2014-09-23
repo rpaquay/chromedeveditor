@@ -138,13 +138,20 @@ defineTests() {
     Services services = new Services(workspace, new PubManager(workspace));;
     AnalyzerService analyzer = services.getService("analyzer");
 
+    Future<AnalysisResult> buildSingleFile(Project project, File file) {
+      return analyzer
+        .getCreateProjectAnalyzer(project)
+        .then((ProjectAnalyzer projectAnalyzer) =>
+            projectAnalyzer.processChanges([file], [], []));
+    }
+
     test('analyze file', () {
       DirectoryEntry dir = createSampleDirectory1('foo1');
       return linkSampleProject(dir, workspace).then((Project project) {
         File file = project.getChildPath('web/sample.dart');
-        return analyzer.buildFiles([file]).then((Map<File, List<AnalysisError>> result) {
-          expect(result.length, 1);
-          expect(result[file], isEmpty);
+        buildSingleFile(project, file).then((AnalysisResult result) {
+          expect(result.getFiles().length, 1);
+          expect(result.getErrorsFor(file), isEmpty);
         });
       });
     });
@@ -154,9 +161,9 @@ defineTests() {
       return linkSampleProject(dir, workspace).then((Project project) {
         File file = project.getChildPath('web/sample.dart');
         return file.setContents("void main() {\n  print('hello') \n}\n").then((_) {
-          return analyzer.buildFiles([file]).then((Map<File, List<AnalysisError>> result) {
-            expect(result.length, 1);
-            expect(result[file].length, 1);
+          buildSingleFile(project, file).then((AnalysisResult result) {
+            expect(result.getFiles().length, 2);
+            expect(result.getErrorsFor(file).length, 1);
           });
         });
       });
@@ -166,15 +173,12 @@ defineTests() {
       DirectoryEntry dir = createSampleDirectory2('foo2');
       return linkSampleProject(dir, workspace).then((Project project) {
         File file = project.getChildPath('web/sample.dart');
-        return analyzer.buildFiles([file]).then((Map<File, List<AnalysisError>> result) {
-          expect(result.length, 1);
-          expect(result[file], isEmpty);
+        buildSingleFile(project, file).then((AnalysisResult result) {
+          expect(result.getFiles().length, 1);
+          expect(result.getErrorsFor(file), isEmpty);
         });
       });
     });
-
-    // TODO: Add integration level tests of ProjectAnalyzer.processChanges().
-
   });
 
   group('services analyzer getDeclaration', () {
