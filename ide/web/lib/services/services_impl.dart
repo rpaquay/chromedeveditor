@@ -217,15 +217,12 @@ class _ServiceContentsProvider implements ContentsProvider {
  * Forwards
  */
 class AnalyzerServiceImpl extends ServiceImpl {
-  DartServices _dartServices;
-  analyzer.ChromeDartSdk dartSdk;
+  final DartServices _dartServices;
 
-  AnalyzerServiceImpl(ServicesIsolate isolate, DartSdk sdk) :
+  AnalyzerServiceImpl(ServicesIsolate isolate, DartSdk sdk)
+    : _dartServices = new analyzer.AnalyzerDartServices(
+          sdk, new _ServiceContentsProvider(isolate.chromeService)),
       super(isolate, 'analyzer') {
-    dartSdk = analyzer.createSdk(sdk);
-    _dartServices = new analyzer.AnalyzerDartServices(
-        dartSdk, new _ServiceContentsProvider(isolate.chromeService));
-
     registerRequestHandler('getOutlineFor', getOutlineFor);
     registerRequestHandler('buildFiles', buildFiles);
     registerRequestHandler('createContext', createContext);
@@ -234,44 +231,12 @@ class AnalyzerServiceImpl extends ServiceImpl {
     registerRequestHandler('getDeclarationFor', getDeclarationFor);
   }
 
-  Future<analyzer.ChromeDartSdk> get dartSdkFuture => new Future.value(dartSdk);
-
   Future<ServiceActionEvent> buildFiles(ServiceActionEvent request) {
     List<Map> fileUuids = request.data["dartFileUuids"];
-    return _buildFiles(fileUuids).then((errorsPerFile) {
-      return request.createReponse({"errors": errorsPerFile});
-    });
-  }
-
-  Future<Map<String, List<Map>>> _buildFiles(List<Map> fileUuids) {
-    Map<String, List<Map>> errorsPerFile = {};
-
-    return dartSdkFuture.then((analyzer.ChromeDartSdk sdk) {
-      return Future.forEach(fileUuids, (String fileUuid) {
-        return _processFile(sdk, fileUuid).then((analyzer.AnalyzerResult result) {
-          List<analyzer.AnalysisError> errors = result.errors;
-          List<Map> responseErrors = [];
-
-          if (errors != null) {
-            for (analyzer.AnalysisError error in errors) {
-              AnalysisError responseError = new AnalysisError();
-              responseError.message = error.message;
-              responseError.offset = error.offset;
-              analyzer.LineInfo_Location location = result.getLineInfo(error);
-              responseError.lineNumber = location.lineNumber;
-              responseError.errorSeverity =
-                  _errorSeverityToInt(error.errorCode.errorSeverity);
-              responseError.length = error.length;
-              responseErrors.add(responseError.toMap());
-            }
-          }
-
-          return responseErrors;
-        }).then((List<Map> errors) {
-          errorsPerFile[fileUuid] = errors;
-        });
-      });
-    }).then((_) => errorsPerFile);
+    return _dartServices
+      .buildFiles(fileUuids)
+      .catchError((error) => request.createErrorReponse(error), test: (e) => e is String)
+      .then((errorsPerFile) => request.createReponse({"errors": errorsPerFile}));
   }
 
   Future<ServiceActionEvent> createContext(ServiceActionEvent request) {
@@ -318,26 +283,6 @@ class AnalyzerServiceImpl extends ServiceImpl {
         Map map = (declaration == null ? null : declaration.toMap());
         request.createReponse(map);
       });
-  }
-  int _errorSeverityToInt(analyzer.ErrorSeverity severity) {
-    if (severity == analyzer.ErrorSeverity.ERROR) {
-      return ErrorSeverity.ERROR;
-    } else  if (severity == analyzer.ErrorSeverity.WARNING) {
-      return ErrorSeverity.WARNING;
-    } else  if (severity == analyzer.ErrorSeverity.INFO) {
-      return ErrorSeverity.INFO;
-    } else {
-      return ErrorSeverity.NONE;
-    }
-  }
-
-  /**
-   * Analyzes file and returns a Future with the [AnalyzerResult].
-   */
-  Future<analyzer.AnalyzerResult> _processFile(analyzer.ChromeDartSdk sdk, String fileUuid) {
-    return isolate.chromeService.getFileContents(fileUuid)
-        .then((String contents) => analyzer.analyzeString(sdk, contents))
-        .then((analyzer.AnalyzerResult result) => result);
   }
 }
 
