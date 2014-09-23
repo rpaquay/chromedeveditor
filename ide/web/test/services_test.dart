@@ -162,7 +162,7 @@ defineTests() {
         File file = project.getChildPath('web/sample.dart');
         return file.setContents("void main() {\n  print('hello') \n}\n").then((_) {
           buildSingleFile(project, file).then((AnalysisResult result) {
-            expect(result.getFiles().length, 2);
+            expect(result.getFiles().length, 1);
             expect(result.getErrorsFor(file).length, 1);
           });
         });
@@ -174,7 +174,7 @@ defineTests() {
       return linkSampleProject(dir, workspace).then((Project project) {
         File file = project.getChildPath('web/sample.dart');
         buildSingleFile(project, file).then((AnalysisResult result) {
-          expect(result.getFiles().length, 1);
+          expect(result.getFiles().length, 2);
           expect(result.getErrorsFor(file), isEmpty);
         });
       });
