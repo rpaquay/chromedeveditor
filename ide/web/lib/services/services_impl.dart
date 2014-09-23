@@ -76,9 +76,9 @@ class ServicesIsolate {
         _registerServiceImpl(new CompilerServiceImpl(sdk, contentsProvider));
 
         DartServices dartServices = dartUseAnalysisServer ?
-            new analyzer.AnalyzerDartServices(sdk, contentsProvider) :
             //TODO(rpaquay) new analysis_server.DartServices(sdk, contentsProvider);
-            throw "Not yet implemented";
+            throw "Not yet implemented" :
+            new analyzer.AnalyzerDartServices(sdk, contentsProvider);
         _registerServiceImpl(new AnalyzerServiceImpl(dartServices));
 
         onHostMessage.listen((ServiceActionEvent event) => _handleMessage(event));
