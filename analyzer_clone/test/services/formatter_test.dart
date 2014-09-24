@@ -9,9 +9,9 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:unittest/unittest.dart';
 
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/services/formatter_impl.dart';
-import 'package:analyzer/src/services/writer.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/services/formatter_impl.dart';
+import 'package:analyzer_clone/src/services/writer.dart';
 
 // Test data location ('pkg/analyzer/test/services/data')
 final TEST_DATA_DIR = join(dirname(fromUri(Platform.script)), 'data');

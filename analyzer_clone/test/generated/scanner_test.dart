@@ -7,12 +7,12 @@
 
 library engine.scanner_test;
 
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/java_junit.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/utilities_collection.dart' show TokenMap;
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/java_junit.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/utilities_collection.dart' show TokenMap;
 import 'package:unittest/unittest.dart' as _ut;
 import 'test_support.dart';
 

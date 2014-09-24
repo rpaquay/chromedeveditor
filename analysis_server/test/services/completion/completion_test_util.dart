@@ -12,10 +12,10 @@ import 'package:analysis_server/src/services/completion/dart_completion_manager.
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/index/local_memory_index.dart';
 import 'package:analysis_server/src/services/search/search_engine_internal.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 import '../../abstract_context.dart';

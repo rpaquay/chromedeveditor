@@ -6,7 +6,7 @@ library test.services.completion.dart.keyword;
 
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/services/completion/keyword_computer.dart';
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 import 'package:unittest/unittest.dart';
 
 import '../../reflective_tests.dart';

@@ -12,9 +12,9 @@ import 'package:analysis_server/src/services/index/store/memory_node_manager.dar
 import 'package:analysis_server/src/services/index/store/split_store.dart';
 import '../../../mocks.dart';
 import '../../../reflective_tests.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:typed_mock/typed_mock.dart';
 import 'package:unittest/unittest.dart';
 

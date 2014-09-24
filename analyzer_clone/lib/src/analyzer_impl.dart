@@ -18,12 +18,12 @@ import '../options.dart';
 
 import 'dart:collection';
 
-import 'package:analyzer/src/generated/java_core.dart' show JavaSystem;
-import 'package:analyzer/src/error_formatter.dart';
-import 'package:analyzer/file_system/physical_file_system.dart';
-import 'package:analyzer/source/package_map_resolver.dart';
-import 'package:analyzer/source/package_map_provider.dart';
-import 'package:analyzer/source/pub_package_map_provider.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart' show JavaSystem;
+import 'package:analyzer_clone/src/error_formatter.dart';
+import 'package:analyzer_clone/file_system/physical_file_system.dart';
+import 'package:analyzer_clone/source/package_map_resolver.dart';
+import 'package:analyzer_clone/source/package_map_provider.dart';
+import 'package:analyzer_clone/source/pub_package_map_provider.dart';
 
 /**
  * The maximum number of sources for which AST structures should be kept in the cache.

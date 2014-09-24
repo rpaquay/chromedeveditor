@@ -19,16 +19,16 @@ import 'package:analysis_server/src/services/correction/strings.dart';
 import 'package:analysis_server/src/services/correction/util.dart';
 import 'package:analysis_server/src/services/search/hierarchy.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/parser.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/sdk.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/utilities_dart.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/parser.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/utilities_dart.dart';
 import 'package:path/path.dart';
 
 

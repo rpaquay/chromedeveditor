@@ -6,10 +6,10 @@ library test.source.package_map_resolver;
 
 import 'dart:collection';
 
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
-import 'package:analyzer/source/package_map_resolver.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/memory_file_system.dart';
+import 'package:analyzer_clone/source/package_map_resolver.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 

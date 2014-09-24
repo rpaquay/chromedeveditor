@@ -5,8 +5,8 @@
 library computer.overrides;
 
 import 'package:analysis_server/src/protocol.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart' as engine;
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart' as engine;
 
 
 /**

@@ -7,8 +7,8 @@ library computer.occurrences;
 import 'dart:collection';
 
 import 'package:analysis_server/src/protocol.dart' as protocol;
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 
 /**

@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:analysis_server/src/protocol.dart' hide ElementKind;
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 import 'package:unittest/unittest.dart';
 
 import '../../reflective_tests.dart';

@@ -7,7 +7,7 @@ library services.completion.suggestion.builder;
 import 'package:analysis_server/src/protocol.dart' as protocol show Element, ElementKind;
 import 'package:analysis_server/src/protocol.dart' hide Element, ElementKind;
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 /**
  * This class visits elements in a class and provides suggestions based upon

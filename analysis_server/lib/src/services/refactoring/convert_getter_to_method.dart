@@ -13,10 +13,10 @@ import 'package:analysis_server/src/services/refactoring/refactoring.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring_internal.dart';
 import 'package:analysis_server/src/services/search/hierarchy.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 
 
 /**

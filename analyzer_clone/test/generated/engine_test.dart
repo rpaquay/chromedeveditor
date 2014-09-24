@@ -5,22 +5,22 @@
 // // significant change. Please see the README file for more information.
 // library engine.engine_test;
 // import 'dart:collection';
-// import 'package:analyzer/src/generated/ast.dart';
-// import 'package:analyzer/src/generated/element.dart';
-// import 'package:analyzer/src/generated/engine.dart';
-// import 'package:analyzer/src/generated/error.dart';
-// import 'package:analyzer/src/generated/java_core.dart';
-// import 'package:analyzer/src/generated/java_engine.dart';
-// import 'package:analyzer/src/generated/java_engine_io.dart';
-// import 'package:analyzer/src/generated/java_io.dart';
-// import 'package:analyzer/src/generated/java_junit.dart';
-// import 'package:analyzer/src/generated/parser.dart';
-// import 'package:analyzer/src/generated/resolver.dart';
-// import 'package:analyzer/src/generated/scanner.dart';
-// import 'package:analyzer/src/generated/source_io.dart';
+// import 'package:analyzer_clone/src/generated/ast.dart';
+// import 'package:analyzer_clone/src/generated/element.dart';
+// import 'package:analyzer_clone/src/generated/engine.dart';
+// import 'package:analyzer_clone/src/generated/error.dart';
+// import 'package:analyzer_clone/src/generated/java_core.dart';
+// import 'package:analyzer_clone/src/generated/java_engine.dart';
+// import 'package:analyzer_clone/src/generated/java_engine_io.dart';
+// import 'package:analyzer_clone/src/generated/java_io.dart';
+// import 'package:analyzer_clone/src/generated/java_junit.dart';
+// import 'package:analyzer_clone/src/generated/parser.dart';
+// import 'package:analyzer_clone/src/generated/resolver.dart';
+// import 'package:analyzer_clone/src/generated/scanner.dart';
+// import 'package:analyzer_clone/src/generated/source_io.dart';
 // import 'package:unittest/unittest.dart' as _ut;
-// import 'package:analyzer/src/generated/testing/ast_factory.dart';
-// import 'package:analyzer/src/generated/testing/element_factory.dart';
+// import 'package:analyzer_clone/src/generated/testing/ast_factory.dart';
+// import 'package:analyzer_clone/src/generated/testing/element_factory.dart';
 // import 'resolver_test.dart';
 // import 'test_support.dart';
 // class AnalysisCacheTest extends EngineTestCase {

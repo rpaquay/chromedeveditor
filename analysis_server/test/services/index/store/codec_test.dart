@@ -9,8 +9,8 @@ import 'package:analysis_server/src/services/index/store/codec.dart';
 import '../../../abstract_single_unit.dart';
 import '../../../mocks.dart';
 import '../../../reflective_tests.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:unittest/unittest.dart';
 
 

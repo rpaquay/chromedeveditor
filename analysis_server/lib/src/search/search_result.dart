@@ -6,7 +6,7 @@ library search.search_result;
 
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart' as engine;
+import 'package:analyzer_clone/src/generated/element.dart' as engine;
 
 
 SearchResult searchResultFromMatch(SearchMatch match) {

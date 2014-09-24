@@ -7,8 +7,8 @@ library services.correction.fix;
 import 'package:analysis_server/src/protocol.dart' show SourceChange;
 import 'package:analysis_server/src/services/correction/fix_internal.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
 
 
 /**

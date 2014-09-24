@@ -4,7 +4,7 @@
 
 library services.search.element_visitors;
 
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 
 /**

@@ -6,8 +6,8 @@ library test.computer.error;
 
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/protocol.dart';
-import 'package:analyzer/src/generated/error.dart' as engine;
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/error.dart' as engine;
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:typed_mock/typed_mock.dart';
 import 'package:unittest/unittest.dart';
 

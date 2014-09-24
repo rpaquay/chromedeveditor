@@ -5,8 +5,8 @@
 library computer.element;
 
 import 'package:analysis_server/src/protocol.dart';
-import 'package:analyzer/src/generated/element.dart' as engine;
-import 'package:analyzer/src/generated/utilities_dart.dart' as engine;
+import 'package:analyzer_clone/src/generated/element.dart' as engine;
+import 'package:analyzer_clone/src/generated/utilities_dart.dart' as engine;
 
 
 Element elementFromEngine(engine.Element element) {

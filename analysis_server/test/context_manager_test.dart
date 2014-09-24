@@ -6,11 +6,11 @@ library test.context.directory.manager;
 
 import 'package:analysis_server/src/context_manager.dart';
 import 'reflective_tests.dart';
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
-import 'package:analyzer/source/package_map_provider.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/memory_file_system.dart';
+import 'package:analyzer_clone/source/package_map_provider.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/path.dart';
 import 'package:unittest/unittest.dart';
 

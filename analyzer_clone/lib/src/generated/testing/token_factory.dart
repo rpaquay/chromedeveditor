@@ -7,7 +7,7 @@
 
 library engine.testing.token_factory;
 
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 
 /**
  * The class `TokenFactory` defines utility methods that can be used to create tokens.

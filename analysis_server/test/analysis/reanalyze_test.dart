@@ -6,7 +6,7 @@ library test.analysis.reanalyze;
 
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/protocol.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:unittest/unittest.dart';
 
 import '../analysis_abstract.dart';

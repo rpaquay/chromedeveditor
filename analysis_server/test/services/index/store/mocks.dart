@@ -6,7 +6,7 @@ library test.services.index.store.mocks;
 
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/index/store/codec.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:typed_mock/typed_mock.dart';
 
 

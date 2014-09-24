@@ -4,9 +4,9 @@
 
 library test.resource_uri_resolver;
 
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/memory_file_system.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 

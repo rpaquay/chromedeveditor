@@ -4,13 +4,13 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-import 'package:analyzer/src/generated/java_io.dart';
-import 'package:analyzer/src/generated/source_io.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/sdk.dart' show DartSdk;
-import 'package:analyzer/src/generated/sdk_io.dart' show DirectoryBasedDartSdk;
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/java_io.dart';
+import 'package:analyzer_clone/src/generated/source_io.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart' show DartSdk;
+import 'package:analyzer_clone/src/generated/sdk_io.dart' show DirectoryBasedDartSdk;
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 
 import 'dart:io';
 

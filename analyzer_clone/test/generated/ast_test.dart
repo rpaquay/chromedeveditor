@@ -7,17 +7,17 @@
 
 library engine.ast_test;
 
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/src/generated/java_junit.dart';
-import 'package:analyzer/src/generated/java_engine.dart' show Predicate;
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/src/generated/java_junit.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart' show Predicate;
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
 import 'package:unittest/unittest.dart' as _ut;
 import 'parser_test.dart' show ParserTestCase;
 import 'test_support.dart';
-import 'package:analyzer/src/generated/testing/ast_factory.dart';
-import 'package:analyzer/src/generated/testing/token_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/ast_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/token_factory.dart';
 
 class AssignmentKind extends Enum<AssignmentKind> {
   static const AssignmentKind BINARY = const AssignmentKind('BINARY', 0);

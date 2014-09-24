@@ -10,8 +10,8 @@ import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/computer/computer_hover.dart';
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/protocol.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/engine.dart' as engine;
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/engine.dart' as engine;
 
 
 /**

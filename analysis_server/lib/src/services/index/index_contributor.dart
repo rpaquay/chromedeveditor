@@ -9,13 +9,13 @@ import 'dart:collection' show Queue;
 import 'package:analysis_server/src/services/correction/namespace.dart';
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/index/index_store.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/html.dart' as ht;
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/html.dart' as ht;
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 /**

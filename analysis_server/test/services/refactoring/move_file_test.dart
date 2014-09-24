@@ -8,10 +8,10 @@ import 'dart:async';
 
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/package_map_resolver.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/source/package_map_resolver.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 import '../../abstract_context.dart';

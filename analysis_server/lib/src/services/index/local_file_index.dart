@@ -9,7 +9,7 @@ import 'package:analysis_server/src/services/index/local_index.dart';
 import 'package:analysis_server/src/services/index/store/codec.dart';
 import 'package:analysis_server/src/services/index/store/temporary_folder_file_manager.dart';
 import 'package:analysis_server/src/services/index/store/split_store.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 
 
 Index createLocalFileIndex() {

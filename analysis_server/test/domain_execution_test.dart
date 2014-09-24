@@ -4,7 +4,7 @@
 
 library test.domain.execution;
 
-import 'package:analyzer/file_system/physical_file_system.dart';
+import 'package:analyzer_clone/file_system/physical_file_system.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/domain_execution.dart';
@@ -15,8 +15,8 @@ import 'package:unittest/unittest.dart';
 import 'mocks.dart';
 import 'operation/operation_queue_test.dart';
 import 'package:typed_mock/typed_mock.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'dart:async';
 
 main() {

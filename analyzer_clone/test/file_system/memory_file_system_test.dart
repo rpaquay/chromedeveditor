@@ -6,13 +6,13 @@ library test.memory_file_system;
 
 import 'dart:async';
 
-import 'package:analyzer/src/generated/engine.dart' show TimestampedData;
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart' show TimestampedData;
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/path.dart';
 import 'package:unittest/unittest.dart';
 import 'package:watcher/watcher.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
-import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/memory_file_system.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
 
 
 var _isFile = new isInstanceOf<File>();

@@ -5,8 +5,8 @@
 library services.src.correction.selection_analyzer;
 
 import 'package:analysis_server/src/services/correction/source_range.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 /**

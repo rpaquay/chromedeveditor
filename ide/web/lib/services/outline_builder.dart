@@ -4,7 +4,7 @@
 
 library spark.outline_builder;
 
-import 'package:analyzer/src/generated/ast.dart' as ast;
+import 'package:analyzer_clone/src/generated/ast.dart' as ast;
 
 import 'services_common.dart';
 

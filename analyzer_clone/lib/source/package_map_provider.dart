@@ -4,7 +4,7 @@
 
 library source.package_map_provider;
 
-import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
 
 /**
  * Data structure output by PackageMapProvider.  This contains both the package

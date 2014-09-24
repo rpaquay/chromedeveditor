@@ -7,7 +7,7 @@ library analysis.server;
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:analyzer/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
 import 'package:analysis_server/src/analysis_logger.dart';
 import 'package:analysis_server/src/channel/channel.dart';
 import 'package:analysis_server/src/context_manager.dart';
@@ -15,17 +15,17 @@ import 'package:analysis_server/src/operation/operation_analysis.dart';
 import 'package:analysis_server/src/operation/operation.dart';
 import 'package:analysis_server/src/operation/operation_queue.dart';
 import 'package:analysis_server/src/protocol.dart' hide Element;
-import 'package:analyzer/source/package_map_provider.dart';
-import 'package:analyzer/source/package_map_resolver.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/sdk.dart';
-import 'package:analyzer/src/generated/source_io.dart';
-import 'package:analyzer/src/generated/java_engine.dart';
+import 'package:analyzer_clone/source/package_map_provider.dart';
+import 'package:analyzer_clone/source/package_map_resolver.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart';
+import 'package:analyzer_clone/src/generated/source_io.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart';
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 import 'package:analysis_server/src/services/correction/namespace.dart';
 
 

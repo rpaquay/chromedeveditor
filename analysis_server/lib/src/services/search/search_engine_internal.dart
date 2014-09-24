@@ -8,8 +8,8 @@ import 'dart:async';
 
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 /**

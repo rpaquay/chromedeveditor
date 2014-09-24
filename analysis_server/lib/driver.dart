@@ -9,9 +9,9 @@ import 'dart:io';
 import 'package:analysis_server/http_server.dart';
 import 'package:analysis_server/src/socket_server.dart';
 import 'package:analysis_server/stdio_server.dart';
-import 'package:analyzer/src/generated/java_io.dart';
-import 'package:analyzer/src/generated/sdk.dart';
-import 'package:analyzer/src/generated/sdk_io.dart';
+import 'package:analyzer_clone/src/generated/java_io.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart';
+import 'package:analyzer_clone/src/generated/sdk_io.dart';
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 

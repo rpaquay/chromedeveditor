@@ -8,8 +8,8 @@ import 'dart:collection';
 
 import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/index/store/collection.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 
 
 /**

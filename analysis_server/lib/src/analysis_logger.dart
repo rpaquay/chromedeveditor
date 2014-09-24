@@ -4,7 +4,7 @@
 
 library analysis.logger;
 
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:logging/logging.dart' as logging;
 
 /**

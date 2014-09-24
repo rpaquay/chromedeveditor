@@ -7,9 +7,9 @@ library test.physical_file_system;
 import 'dart:async';
 import 'dart:io' as io;
 
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/file_system/physical_file_system.dart';
-import 'package:analyzer/src/generated/source_io.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/file_system/physical_file_system.dart';
+import 'package:analyzer_clone/src/generated/source_io.dart';
 import 'package:path/path.dart';
 import 'package:unittest/unittest.dart';
 import 'package:watcher/watcher.dart';

@@ -8,8 +8,8 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 
-import 'package:analyzer/src/services/runtime/log.dart' as log;
-import 'package:analyzer/src/services/runtime/coverage/coverage_impl.dart';
+import 'package:analyzer_clone/src/services/runtime/log.dart' as log;
+import 'package:analyzer_clone/src/services/runtime/coverage/coverage_impl.dart';
 
 
 main(args) {

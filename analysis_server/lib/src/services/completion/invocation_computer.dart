@@ -8,8 +8,8 @@ import 'dart:async';
 
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
 import 'package:analysis_server/src/services/completion/suggestion_builder.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 /**
  * A computer for calculating invocation / access suggestions

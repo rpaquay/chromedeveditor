@@ -7,10 +7,10 @@ library context.directory.manager;
 import 'dart:async';
 import 'dart:collection';
 
-import 'package:analyzer/file_system/file_system.dart';
-import 'package:analyzer/source/package_map_provider.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analyzer_clone/source/package_map_provider.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/path.dart' as pathos;
 import 'package:watcher/watcher.dart';
 

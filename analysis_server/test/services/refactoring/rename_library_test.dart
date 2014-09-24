@@ -6,7 +6,7 @@ library test.services.refactoring.rename_library;
 
 import 'package:analysis_server/src/protocol.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 import 'abstract_rename.dart';

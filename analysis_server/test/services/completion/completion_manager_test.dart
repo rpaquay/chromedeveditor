@@ -8,7 +8,7 @@ import 'package:analysis_server/src/services/completion/completion_manager.dart'
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
 import '../../abstract_context.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 main() {

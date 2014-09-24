@@ -8,8 +8,8 @@ import 'dart:async';
 
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 
 /**
  * A computer for calculating `completion.getSuggestions` request results

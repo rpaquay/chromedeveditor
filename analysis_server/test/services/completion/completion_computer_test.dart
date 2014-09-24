@@ -15,8 +15,8 @@ import 'package:analysis_server/src/services/completion/dart_completion_manager.
 import 'package:analysis_server/src/services/search/search_engine_internal.dart';
 import '../../abstract_single_unit.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 main() {

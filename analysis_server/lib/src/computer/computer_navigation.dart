@@ -5,9 +5,9 @@
 library computer.navigation;
 
 import 'package:analysis_server/src/protocol.dart' as protocol;
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 
 
 /**

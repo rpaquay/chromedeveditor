@@ -7,20 +7,20 @@
 
 library engine.parser_test;
 
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/java_junit.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/source.dart' show Source;
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/parser.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/utilities_dart.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/java_junit.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/source.dart' show Source;
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/parser.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/utilities_dart.dart';
 import 'package:unittest/unittest.dart' as _ut;
 import 'test_support.dart';
-import 'package:analyzer/src/generated/testing/ast_factory.dart';
-import 'package:analyzer/src/generated/testing/element_factory.dart';
-import 'package:analyzer/src/generated/testing/token_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/ast_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/element_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/token_factory.dart';
 
 class AnalysisErrorListener_SimpleParserTest_computeStringValue implements AnalysisErrorListener {
   @override

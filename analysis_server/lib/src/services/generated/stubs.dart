@@ -7,10 +7,10 @@
 
 library service.correction.stubs;
 
-import 'package:analyzer/src/generated/ast.dart' show AstNode;
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart' show AstNode;
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 abstract class SearchFilter {

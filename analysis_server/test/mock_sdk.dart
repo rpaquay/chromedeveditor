@@ -4,11 +4,11 @@
 
 library testing.mock_sdk;
 
-import 'package:analyzer/file_system/file_system.dart' as resource;
-import 'package:analyzer/file_system/memory_file_system.dart' as resource;
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/sdk.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/file_system/file_system.dart' as resource;
+import 'package:analyzer_clone/file_system/memory_file_system.dart' as resource;
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 class MockSdk implements DartSdk {

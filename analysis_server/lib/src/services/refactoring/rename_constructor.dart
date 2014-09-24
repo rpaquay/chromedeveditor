@@ -15,8 +15,8 @@ import 'package:analysis_server/src/services/refactoring/refactoring_internal.da
 import 'package:analysis_server/src/services/refactoring/rename.dart';
 import 'package:analysis_server/src/services/search/hierarchy.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart';
 
 
 /**

@@ -6,7 +6,7 @@ library spark.analysis_server;
 
 import 'dart:async';
 
-//import 'package:analyzer/file_system/file_system.dart';
+//import 'package:analyzer_clone/file_system/file_system.dart';
 //import 'package:analysis_server/src/analysis_server.dart';
 //import 'package:analysis_server/src/channel/channel.dart';
 //import 'package:analysis_server/src/package_map_provider.dart';

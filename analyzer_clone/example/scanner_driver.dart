@@ -6,7 +6,7 @@
 
 import 'dart:io';
 
-import 'package:analyzer/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
 
 main(List<String> args) {
 

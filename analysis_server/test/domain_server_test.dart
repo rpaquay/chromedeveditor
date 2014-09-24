@@ -4,7 +4,7 @@
 
 library test.domain.server;
 
-import 'package:analyzer/file_system/physical_file_system.dart';
+import 'package:analyzer_clone/file_system/physical_file_system.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/domain_server.dart';

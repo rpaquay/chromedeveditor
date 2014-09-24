@@ -6,11 +6,11 @@ library formatter_impl;
 
 import 'dart:math';
 
-import 'package:analyzer/analyzer.dart';
-import 'package:analyzer/src/generated/parser.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/services/writer.dart';
+import 'package:analyzer_clone/analyzer.dart';
+import 'package:analyzer_clone/src/generated/parser.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/services/writer.dart';
 
 /// Formatter options.
 class FormatterOptions {

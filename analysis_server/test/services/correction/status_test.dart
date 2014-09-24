@@ -9,9 +9,9 @@ import 'package:analysis_server/src/services/search/search_engine.dart';
 import 'package:analysis_server/src/services/correction/source_range.dart';
 import '../../abstract_single_unit.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 import 'package:analysis_server/src/protocol.dart' hide Element;
 

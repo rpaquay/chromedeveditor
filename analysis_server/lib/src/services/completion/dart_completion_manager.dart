@@ -13,10 +13,10 @@ import 'package:analysis_server/src/services/completion/invocation_computer.dart
 import 'package:analysis_server/src/services/completion/keyword_computer.dart';
 import 'package:analysis_server/src/services/completion/local_computer.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 /**
  * The base class for computing code completion suggestions.

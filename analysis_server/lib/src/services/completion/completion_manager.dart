@@ -9,8 +9,8 @@ import 'dart:async';
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 /**
  * Manages `CompletionComputer`s for a given completion request.

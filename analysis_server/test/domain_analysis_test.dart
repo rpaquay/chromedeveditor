@@ -12,7 +12,7 @@ import 'package:analysis_server/src/domain_analysis.dart';
 import 'package:analysis_server/src/protocol.dart';
 import 'mock_sdk.dart';
 import 'reflective_tests.dart';
-import 'package:analyzer/file_system/memory_file_system.dart';
+import 'package:analyzer_clone/file_system/memory_file_system.dart';
 import 'package:path/path.dart';
 import 'package:unittest/unittest.dart';
 

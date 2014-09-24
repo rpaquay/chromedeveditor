@@ -11,13 +11,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:analyzer/src/analyzer_impl.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/interner.dart';
-import 'package:analyzer/src/generated/java_core.dart' show JavaSystem;
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/options.dart';
+import 'package:analyzer_clone/src/analyzer_impl.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/interner.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart' show JavaSystem;
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/options.dart';
 
 void main(List<String> args) {
   StringUtilities.INTERNER = new MappedInterner();

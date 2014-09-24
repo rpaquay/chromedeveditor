@@ -13,11 +13,11 @@ import 'package:analysis_server/src/computer/computer_overrides.dart';
 import 'package:analysis_server/src/operation/operation.dart';
 import 'package:analysis_server/src/protocol.dart' as protocol;
 import 'package:analysis_server/src/services/index/index.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/html.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/html.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 void sendAnalysisNotificationErrors(AnalysisServer server, String file,

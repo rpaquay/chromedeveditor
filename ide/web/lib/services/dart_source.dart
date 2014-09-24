@@ -4,8 +4,8 @@
 
 library spark.dart_source;
 
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 import 'services_utils.dart' as utils;
 

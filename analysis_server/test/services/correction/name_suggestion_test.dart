@@ -7,8 +7,8 @@ library test.services.correction.name_suggestion;
 import 'package:analysis_server/src/services/correction/name_suggestion.dart';
 import '../../abstract_single_unit.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 import 'package:unittest/unittest.dart';
 
 

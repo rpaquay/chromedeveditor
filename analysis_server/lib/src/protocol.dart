@@ -15,11 +15,11 @@ import 'package:analysis_server/src/services/correction/fix.dart' show Fix;
 import 'package:analysis_server/src/services/json.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart' as
     engine;
-import 'package:analyzer/src/generated/ast.dart' as engine;
-import 'package:analyzer/src/generated/element.dart' as engine;
-import 'package:analyzer/src/generated/engine.dart' as engine;
-import 'package:analyzer/src/generated/error.dart' as engine;
-import 'package:analyzer/src/generated/source.dart' as engine;
+import 'package:analyzer_clone/src/generated/ast.dart' as engine;
+import 'package:analyzer_clone/src/generated/element.dart' as engine;
+import 'package:analyzer_clone/src/generated/engine.dart' as engine;
+import 'package:analyzer_clone/src/generated/error.dart' as engine;
+import 'package:analyzer_clone/src/generated/source.dart' as engine;
 
 part 'generated_protocol.dart';
 

@@ -11,7 +11,7 @@ import 'package:analysis_server/src/services/refactoring/naming_conventions.dart
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
 import 'package:analysis_server/src/services/refactoring/rename.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 
 /**

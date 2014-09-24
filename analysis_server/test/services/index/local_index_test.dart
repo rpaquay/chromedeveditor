@@ -11,9 +11,9 @@ import 'package:analysis_server/src/services/index/local_memory_index.dart';
 import 'package:analysis_server/src/services/index/local_index.dart';
 import '../../abstract_context.dart';
 import '../../reflective_tests.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/html.dart';
-import 'package:analyzer/src/generated/source_io.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/html.dart';
+import 'package:analyzer_clone/src/generated/source_io.dart';
 import 'package:unittest/unittest.dart';
 
 import 'store/single_source_container.dart';

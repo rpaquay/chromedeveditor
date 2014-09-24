@@ -11,7 +11,7 @@ import 'mocks.dart';
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/protocol.dart';
 import 'package:analysis_server/src/socket_server.dart';
-import 'package:analyzer/src/generated/sdk_io.dart';
+import 'package:analyzer_clone/src/generated/sdk_io.dart';
 import 'package:unittest/unittest.dart';
 
 main() {

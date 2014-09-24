@@ -9,7 +9,7 @@ import 'dart:async';
 import 'package:analysis_server/src/protocol.dart' hide Element;
 import 'package:analysis_server/src/services/refactoring/inline_method.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
 import '../../reflective_tests.dart';

@@ -8,25 +8,25 @@
 library engine.resolver_test;
 
 import 'dart:collection';
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/java_junit.dart';
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/src/generated/java_engine_io.dart';
-import 'package:analyzer/src/generated/source_io.dart';
-import 'package:analyzer/src/generated/error.dart';
-import 'package:analyzer/src/generated/scanner.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/parser.dart' show ParserErrorCode;
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/resolver.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/utilities_dart.dart';
-import 'package:analyzer/src/generated/sdk.dart' show DartSdk;
-import 'package:analyzer/src/generated/sdk_io.dart' show DirectoryBasedDartSdk;
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/java_junit.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/src/generated/java_engine_io.dart';
+import 'package:analyzer_clone/src/generated/source_io.dart';
+import 'package:analyzer_clone/src/generated/error.dart';
+import 'package:analyzer_clone/src/generated/scanner.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/parser.dart' show ParserErrorCode;
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/resolver.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/utilities_dart.dart';
+import 'package:analyzer_clone/src/generated/sdk.dart' show DartSdk;
+import 'package:analyzer_clone/src/generated/sdk_io.dart' show DirectoryBasedDartSdk;
 import 'package:unittest/unittest.dart' as _ut;
 import 'test_support.dart';
-import 'package:analyzer/src/generated/testing/ast_factory.dart';
-import 'package:analyzer/src/generated/testing/element_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/ast_factory.dart';
+import 'package:analyzer_clone/src/generated/testing/element_factory.dart';
 
 /**
  * The class `AnalysisContextFactory` defines utility methods used to create analysis contexts

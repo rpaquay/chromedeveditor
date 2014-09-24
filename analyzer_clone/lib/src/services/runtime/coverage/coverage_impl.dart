@@ -11,10 +11,10 @@ import 'dart:io';
 
 import 'package:path/path.dart' as pathos;
 
-import 'package:analyzer/src/generated/scanner.dart' show CharSequenceReader, Scanner;
-import 'package:analyzer/src/generated/parser.dart' show Parser;
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/engine.dart' show RecordingErrorListener;
+import 'package:analyzer_clone/src/generated/scanner.dart' show CharSequenceReader, Scanner;
+import 'package:analyzer_clone/src/generated/parser.dart' show Parser;
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/engine.dart' show RecordingErrorListener;
 
 import '../log.dart' as log;
 import 'models.dart';

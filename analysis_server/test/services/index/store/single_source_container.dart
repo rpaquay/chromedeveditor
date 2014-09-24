@@ -4,7 +4,7 @@
 
 library test.services.src.index.store.single_source_container;
 
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 /**

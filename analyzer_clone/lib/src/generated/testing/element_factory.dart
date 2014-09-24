@@ -8,14 +8,14 @@
 library engine.testing.element_factory;
 
 import 'dart:collection';
-import 'package:analyzer/src/generated/java_core.dart';
-import 'package:analyzer/src/generated/utilities_dart.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/constant.dart';
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/resolver.dart';
+import 'package:analyzer_clone/src/generated/java_core.dart';
+import 'package:analyzer_clone/src/generated/utilities_dart.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/constant.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/resolver.dart';
 
 /**
  * The class `ElementFactory` defines utility methods used to create elements for testing

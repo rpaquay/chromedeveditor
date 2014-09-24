@@ -10,7 +10,7 @@ import 'package:analysis_server/src/protocol.dart' as protocol;
 import 'package:analysis_server/src/search/element_references.dart';
 import 'package:analysis_server/src/search/type_hierarchy.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
 
 /**
  * Instances of the class [SearchDomainHandler] implement a [RequestHandler]

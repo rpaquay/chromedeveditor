@@ -13,10 +13,10 @@ import 'package:analysis_server/src/services/index/index.dart';
 import 'package:analysis_server/src/services/index/index_store.dart';
 import 'package:analysis_server/src/services/index/store/codec.dart';
 import 'package:analysis_server/src/services/index/store/collection.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 
 
 /**

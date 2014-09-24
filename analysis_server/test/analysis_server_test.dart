@@ -4,16 +4,16 @@
 
 library test.analysis_server;
 
-import 'package:analyzer/file_system/physical_file_system.dart';
+import 'package:analyzer_clone/file_system/physical_file_system.dart';
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/domain_server.dart';
 import 'package:analysis_server/src/operation/operation.dart';
 import 'package:analysis_server/src/protocol.dart';
 import 'mock_sdk.dart';
-import 'package:analyzer/src/generated/engine.dart';
-import 'package:analyzer/src/generated/java_engine.dart';
-import 'package:analyzer/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/java_engine.dart';
+import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:typed_mock/typed_mock.dart';
 import 'package:unittest/unittest.dart';
 

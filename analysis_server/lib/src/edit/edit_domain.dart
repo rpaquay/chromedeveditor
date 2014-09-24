@@ -15,12 +15,12 @@ import 'package:analysis_server/src/services/correction/status.dart';
 import 'package:analysis_server/src/services/json.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
-import 'package:analyzer/src/generated/ast.dart';
-import 'package:analyzer/src/generated/element.dart';
-import 'package:analyzer/src/generated/engine.dart' as engine;
-import 'package:analyzer/src/generated/error.dart' as engine;
-import 'package:analyzer/src/generated/source.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/ast.dart';
+import 'package:analyzer_clone/src/generated/element.dart';
+import 'package:analyzer_clone/src/generated/engine.dart' as engine;
+import 'package:analyzer_clone/src/generated/error.dart' as engine;
+import 'package:analyzer_clone/src/generated/source.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 
 
 /**

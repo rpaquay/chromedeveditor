@@ -8,7 +8,7 @@ import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/operation/operation_analysis.dart';
 import 'package:analysis_server/src/operation/operation.dart';
 import 'package:analysis_server/src/operation/operation_queue.dart';
-import 'package:analyzer/src/generated/engine.dart';
+import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:typed_mock/typed_mock.dart';
 import 'package:unittest/unittest.dart';
 
