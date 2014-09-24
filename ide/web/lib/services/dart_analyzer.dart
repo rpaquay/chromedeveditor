@@ -5,7 +5,7 @@
 /**
  * This library is an entry-point to the Dart analyzer package.
  */
-library spark.analyzer;
+library spark.dart_analyzer;
 
 import 'dart:async';
 

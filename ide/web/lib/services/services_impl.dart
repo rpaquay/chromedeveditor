@@ -6,11 +6,11 @@ library spark.services_impl;
 
 import 'dart:async';
 
-import 'analyzer.dart' as analyzer;
-import 'analysis_server.dart' as analysis_server;
+import 'dart_analyzer.dart' as dart_analyzer;
+import 'dart_analysis_server.dart' as dart_analysis_server;
 import 'dart_services.dart';
 import 'services_common.dart';
-import 'compiler.dart';
+import 'dart_compiler.dart';
 import '../dart/sdk.dart';
 
 void init(WorkerToHostHandler hostHandler) {
@@ -77,8 +77,8 @@ class ServicesIsolate {
         _registerServiceImpl(new CompilerServiceImpl(sdk, contentsProvider));
 
         DartServices dartServices = dartUseAnalysisServer ?
-            new analysis_server.AnalysisServerDartServices(sdk, contentsProvider):
-            new analyzer.AnalyzerDartServices(sdk, contentsProvider);
+            new dart_analysis_server.AnalysisServerDartServices(sdk, contentsProvider):
+            new dart_analyzer.AnalyzerDartServices(sdk, contentsProvider);
         _registerServiceImpl(new AnalyzerServiceImpl(dartServices));
 
         onHostMessage.listen((ServiceActionEvent event) => _handleMessage(event));

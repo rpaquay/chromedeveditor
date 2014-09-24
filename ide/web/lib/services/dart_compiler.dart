@@ -5,7 +5,7 @@
 /**
  * This library is a wrapper around the Dart to JavaScript (dart2js) compiler.
  */
-library spark.compiler;
+library spark.dart_compiler;
 
 import 'dart:async';
 import 'dart:html' as html;
