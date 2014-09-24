@@ -1,4 +1,4 @@
-name: analyzer
+name: analyzer_clone
 version: 0.23.0-dev.6
 author: Dart Team <misc@dartlang.org>
 description: Static analyzer for Dart.
