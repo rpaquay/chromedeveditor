@@ -8,7 +8,7 @@ import 'dart:async';
 
 import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/path.dart';
-import 'package:watcher/watcher.dart';
+import 'package:watcher/src/watch_event.dart';
 
 
 /**
