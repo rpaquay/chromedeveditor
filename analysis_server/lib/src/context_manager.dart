@@ -12,7 +12,7 @@ import 'package:analyzer_clone/source/package_map_provider.dart';
 import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/path.dart' as pathos;
-import 'package:watcher/watcher.dart';
+import 'package:watcher/src/watch_event.dart';
 
 
 /**
