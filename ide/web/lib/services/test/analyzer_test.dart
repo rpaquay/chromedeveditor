@@ -6,6 +6,7 @@ library spark.analyzer_test;
 
 import 'package:unittest/unittest.dart';
 
+import '../chrome_dart_sdk.dart';
 import '../analyzer.dart';
 import '../../services/services_impl.dart';
 
