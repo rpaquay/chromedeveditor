@@ -5,13 +5,14 @@
 library test.computer.element;
 
 import 'package:analysis_server/src/protocol.dart';
-import '../abstract_context.dart';
-import '../reflective_tests.dart';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/element.dart' as engine;
 import 'package:analyzer/src/generated/source.dart';
 import 'package:analyzer/src/generated/utilities_dart.dart' as engine;
 import 'package:unittest/unittest.dart';
+
+import '../abstract_context.dart';
+import '../reflective_tests.dart';
 
 
 
@@ -45,6 +46,9 @@ class ElementKindTest {
     expect(
         new ElementKind.fromEngine(engine.ElementKind.GETTER),
         ElementKind.GETTER);
+    expect(
+        new ElementKind.fromEngine(engine.ElementKind.LABEL),
+        ElementKind.LABEL);
     expect(
         new ElementKind.fromEngine(engine.ElementKind.LIBRARY),
         ElementKind.LIBRARY);
@@ -83,9 +87,7 @@ class ElementKindTest {
         new ElementKind(ElementKind.CONSTRUCTOR.name),
         ElementKind.CONSTRUCTOR);
     expect(new ElementKind(ElementKind.FIELD.name), ElementKind.FIELD);
-    expect(
-        new ElementKind(ElementKind.FUNCTION.name),
-        ElementKind.FUNCTION);
+    expect(new ElementKind(ElementKind.FUNCTION.name), ElementKind.FUNCTION);
     expect(
         new ElementKind(ElementKind.FUNCTION_TYPE_ALIAS.name),
         ElementKind.FUNCTION_TYPE_ALIAS);
@@ -95,9 +97,7 @@ class ElementKindTest {
         new ElementKind(ElementKind.LOCAL_VARIABLE.name),
         ElementKind.LOCAL_VARIABLE);
     expect(new ElementKind(ElementKind.METHOD.name), ElementKind.METHOD);
-    expect(
-        new ElementKind(ElementKind.PARAMETER.name),
-        ElementKind.PARAMETER);
+    expect(new ElementKind(ElementKind.PARAMETER.name), ElementKind.PARAMETER);
     expect(new ElementKind(ElementKind.SETTER.name), ElementKind.SETTER);
     expect(
         new ElementKind(ElementKind.TOP_LEVEL_VARIABLE.name),
@@ -119,7 +119,8 @@ class ElementKindTest {
 
   void test_toString() {
     expect(ElementKind.CLASS.toString(), 'ElementKind.CLASS');
-    expect(ElementKind.COMPILATION_UNIT.toString(),
+    expect(
+        ElementKind.COMPILATION_UNIT.toString(),
         'ElementKind.COMPILATION_UNIT');
   }
 }
@@ -229,6 +230,33 @@ class A {
     expect(element.flags, 0);
   }
 
+  void test_fromElement_LABEL() {
+    Source source = addSource('/test.dart', '''
+main() {
+myLabel:
+  while (true) {
+    break myLabel;
+  }
+}''');
+    CompilationUnit unit = resolveLibraryUnit(source);
+    engine.LabelElement engineElement = findElementInUnit(unit, 'myLabel');
+    // create notification Element
+    Element element = new Element.fromEngine(engineElement);
+    expect(element.kind, ElementKind.LABEL);
+    expect(element.name, 'myLabel');
+    {
+      Location location = element.location;
+      expect(location.file, '/test.dart');
+      expect(location.offset, 9);
+      expect(location.length, 'myLabel'.length);
+      expect(location.startLine, 2);
+      expect(location.startColumn, 1);
+    }
+    expect(element.parameters, isNull);
+    expect(element.returnType, isNull);
+    expect(element.flags, 0);
+  }
+
   void test_fromElement_METHOD() {
     Source source = addSource('/test.dart', '''
 class A {
@@ -253,6 +281,32 @@ class A {
     expect(element.parameters, '(int a, {String b})');
     expect(element.returnType, 'List<String>');
     expect(element.flags, Element.FLAG_STATIC);
+  }
+
+  void test_fromElement_SETTER() {
+    Source source = addSource('/test.dart', '''
+class A {
+  set mySetter(String x) {}
+}''');
+    CompilationUnit unit = resolveLibraryUnit(source);
+    engine.FieldElement engineFieldElement =
+        findElementInUnit(unit, 'mySetter', engine.ElementKind.FIELD);
+    engine.PropertyAccessorElement engineElement = engineFieldElement.setter;
+    // create notification Element
+    Element element = new Element.fromEngine(engineElement);
+    expect(element.kind, ElementKind.SETTER);
+    expect(element.name, 'mySetter');
+    {
+      Location location = element.location;
+      expect(location.file, '/test.dart');
+      expect(location.offset, 16);
+      expect(location.length, 'mySetter'.length);
+      expect(location.startLine, 2);
+      expect(location.startColumn, 7);
+    }
+    expect(element.parameters, '(String x)');
+    expect(element.returnType, isNull);
+    expect(element.flags, 0);
   }
 
   void test_fromElement_dynamic() {

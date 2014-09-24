@@ -6,7 +6,8 @@ library services.completion.computer.dart.toplevel;
 
 import 'dart:async';
 
-import 'package:analysis_server/src/protocol.dart' hide Element;
+import 'package:analysis_server/src/protocol.dart' as protocol show Element, ElementKind;
+import 'package:analysis_server/src/protocol.dart' hide Element, ElementKind;
 import 'package:analysis_server/src/services/completion/dart_completion_manager.dart';
 import 'package:analysis_server/src/services/completion/suggestion_builder.dart';
 import 'package:analysis_server/src/services/search/search_engine.dart';
@@ -17,7 +18,7 @@ import 'package:analyzer/src/generated/element.dart';
  * A computer for calculating imported class and top level variable
  * `completion.getSuggestions` request results.
  */
-class ImportedTypeComputer extends DartCompletionComputer {
+class ImportedComputer extends DartCompletionComputer {
 
   @override
   bool computeFast(DartCompletionRequest request) {
@@ -30,7 +31,7 @@ class ImportedTypeComputer extends DartCompletionComputer {
 
   @override
   Future<bool> computeFull(DartCompletionRequest request) {
-    return request.node.accept(new _ImportedTypeVisitor(request));
+    return request.node.accept(new _ImportedVisitor(request));
   }
 }
 
@@ -38,10 +39,10 @@ class ImportedTypeComputer extends DartCompletionComputer {
  * A visitor for determining which imported class and top level variable
  * should be suggested and building those suggestions.
  */
-class _ImportedTypeVisitor extends GeneralizingAstVisitor<Future<bool>> {
+class _ImportedVisitor extends GeneralizingAstVisitor<Future<bool>> {
   final DartCompletionRequest request;
 
-  _ImportedTypeVisitor(this.request);
+  _ImportedVisitor(this.request);
 
   @override
   Future<bool> visitCombinator(Combinator node) {
@@ -53,6 +54,18 @@ class _ImportedTypeVisitor extends GeneralizingAstVisitor<Future<bool>> {
       return new Future.value(true);
     }
     return new Future.value(false);
+  }
+
+  @override
+  Future<bool> visitExpressionStatement(ExpressionStatement node) {
+    Expression expression = node.expression;
+    if (expression is SimpleIdentifier) {
+      if (expression.end < request.offset) {
+        // Don't suggest imported elements for local var name
+        return new Future.value(false);
+      }
+    }
+    return visitNode(node);
   }
 
   @override
@@ -97,20 +110,23 @@ class _ImportedTypeVisitor extends GeneralizingAstVisitor<Future<bool>> {
       // and the list of names that should be shown or hidden
       request.unit.directives.forEach((Directive directive) {
         if (directive is ImportDirective) {
-          LibraryElement lib = directive.element.importedLibrary;
-          if (directive.prefix == null) {
-            visibleLibs.add(lib);
-            directive.combinators.forEach((Combinator combinator) {
-              if (combinator is ShowCombinator) {
-                showNames[lib] = combinator.shownNames.map(
-                    (SimpleIdentifier id) => id.name).toSet();
-              } else if (combinator is HideCombinator) {
-                hideNames[lib] = combinator.hiddenNames.map(
-                    (SimpleIdentifier id) => id.name).toSet();
-              }
-            });
-          } else {
-            excludedLibs.add(lib);
+          ImportElement element = directive.element;
+          if (element != null) {
+            LibraryElement lib = element.importedLibrary;
+            if (directive.prefix == null) {
+              visibleLibs.add(lib);
+              directive.combinators.forEach((Combinator combinator) {
+                if (combinator is ShowCombinator) {
+                  showNames[lib] =
+                      combinator.shownNames.map((SimpleIdentifier id) => id.name).toSet();
+                } else if (combinator is HideCombinator) {
+                  hideNames[lib] =
+                      combinator.hiddenNames.map((SimpleIdentifier id) => id.name).toSet();
+                }
+              });
+            } else {
+              excludedLibs.add(lib);
+            }
           }
         }
       });
@@ -126,17 +142,42 @@ class _ImportedTypeVisitor extends GeneralizingAstVisitor<Future<bool>> {
             Set<String> hide = hideNames[lib];
             if ((show == null || show.contains(completion)) &&
                 (hide == null || !hide.contains(completion))) {
-              request.suggestions.add(
-                  new CompletionSuggestion(
-                      new CompletionSuggestionKind.fromElementKind(element.kind),
-                      visibleLibs.contains(lib) || lib.isDartCore ?
-                          CompletionRelevance.DEFAULT :
-                          CompletionRelevance.LOW,
-                      completion,
-                      completion.length,
-                      0,
-                      element.isDeprecated,
-                      false));
+
+              CompletionSuggestionKind kind =
+                  new CompletionSuggestionKind.fromElementKind(element.kind);
+
+              CompletionRelevance relevance;
+              if (visibleLibs.contains(lib) || lib.isDartCore) {
+                relevance = CompletionRelevance.DEFAULT;
+              } else {
+                relevance = CompletionRelevance.LOW;
+              }
+
+              CompletionSuggestion suggestion = new CompletionSuggestion(
+                  kind,
+                  relevance,
+                  completion,
+                  completion.length,
+                  0,
+                  element.isDeprecated,
+                  false);
+
+              suggestion.element = new protocol.Element.fromEngine(element);
+
+              DartType type;
+              if (element is TopLevelVariableElement) {
+                type = element.type;
+              } else if (element is FunctionElement) {
+                type = element.returnType;
+              }
+              if (type != null) {
+                String name = type.displayName;
+                if (name != null && name.length > 0 && name != 'dynamic') {
+                  suggestion.returnType = name;
+                }
+              }
+
+              request.suggestions.add(suggestion);
             }
           }
         }
@@ -145,4 +186,3 @@ class _ImportedTypeVisitor extends GeneralizingAstVisitor<Future<bool>> {
     });
   }
 }
-

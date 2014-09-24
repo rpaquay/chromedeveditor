@@ -9,10 +9,10 @@ import 'dart:async';
 import 'package:analysis_server/src/protocol.dart' hide Element;
 import 'package:analysis_server/src/services/refactoring/inline_method.dart';
 import 'package:analysis_server/src/services/refactoring/refactoring.dart';
-import '../../reflective_tests.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:unittest/unittest.dart';
 
+import '../../reflective_tests.dart';
 import 'abstract_refactoring.dart';
 
 
@@ -37,10 +37,13 @@ main() {
   var res = test(1, 2);
 }
 ''');
-    _createRefactoring('test(a, b)');
+    _createRefactoring('test(1, 2)');
     // validate state
     return refactoring.checkInitialConditions().then((_) {
       expect(refactoring.refactoringName, 'Inline Function');
+      expect(refactoring.className, isNull);
+      expect(refactoring.methodName, 'test');
+      expect(refactoring.isDeclaration, isFalse);
     });
   }
 
@@ -59,6 +62,9 @@ class A {
     // validate state
     return refactoring.checkInitialConditions().then((_) {
       expect(refactoring.refactoringName, 'Inline Method');
+      expect(refactoring.className, 'A');
+      expect(refactoring.methodName, 'test');
+      expect(refactoring.isDeclaration, isTrue);
     });
   }
 
@@ -84,6 +90,17 @@ main() {
           expectedMessage: 'Cannot inline cascade invocation.',
           expectedContextRange: location);
     });
+  }
+
+  test_bad_constructor() {
+    indexTestUnit(r'''
+class A {
+  A.named() {}
+}
+''');
+    _createRefactoring('named() {}');
+    // error
+    return _assertInvalidSelection();
   }
 
   test_bad_deleteSource_inlineOne() {
@@ -118,8 +135,7 @@ main() {
 ''');
     _createRefactoring(') {');
     // error
-    return _assertConditionsFatal(
-        'Method declaration or reference must be selected to activate this refactoring.');
+    return _assertInvalidSelection();
   }
 
   test_bad_notSimpleIdentifier() {
@@ -131,8 +147,7 @@ main() {
 ''');
     _createRefactoring('test;');
     // error
-    return _assertConditionsFatal(
-        'Method declaration or reference must be selected to activate this refactoring.');
+    return _assertInvalidSelection();
   }
 
   test_bad_operator() {
@@ -688,6 +703,64 @@ main() {
 ''');
   }
 
+  test_getter_classMember_instance() {
+    indexTestUnit(r'''
+class A {
+  int f;
+  int get result => f + 1;
+}
+main(A a) {
+  print(a.result);
+}
+''');
+    _createRefactoring('result =>');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+class A {
+  int f;
+}
+main(A a) {
+  print(a.f + 1);
+}
+''');
+  }
+
+  test_getter_classMember_static() {
+    indexTestUnit(r'''
+class A {
+  static int get result => 1 + 2;
+}
+main() {
+  print(A.result);
+}
+''');
+    _createRefactoring('result =>');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+class A {
+}
+main() {
+  print(1 + 2);
+}
+''');
+  }
+
+  test_getter_topLevel() {
+    indexTestUnit(r'''
+String get message => 'Hello, World!';
+main() {
+  print(message);
+}
+''');
+    _createRefactoring('message =>');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+main() {
+  print('Hello, World!');
+}
+''');
+  }
+
   test_initialMode_all() {
     indexTestUnit(r'''
 test(a, b) {
@@ -925,6 +998,22 @@ main() {
 ''');
   }
 
+  test_reference_expressionBody() {
+    indexTestUnit(r'''
+String message() => 'Hello, World!';
+main() {
+  print(message);
+}
+''');
+    _createRefactoring('message()');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+main() {
+  print(() => 'Hello, World!');
+}
+''');
+  }
+
   test_reference_noStatement() {
     indexTestUnit(r'''
 test(a, b) {
@@ -989,6 +1078,48 @@ main() {
     print(a);
     print(b);
   });
+}
+''');
+  }
+
+  test_setter_classMember_instance() {
+    indexTestUnit(r'''
+class A {
+  int f;
+  void set result(x) {
+    f = x + 1;
+  }
+}
+main(A a) {
+  a.result = 5;
+}
+''');
+    _createRefactoring('result(x)');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+class A {
+  int f;
+}
+main(A a) {
+  a.f = 5 + 1;
+}
+''');
+  }
+
+  test_setter_topLevel() {
+    indexTestUnit(r'''
+void set result(x) {
+  print(x + 1);
+}
+main() {
+  result = 5;
+}
+''');
+    _createRefactoring('result(x)');
+    // validate change
+    return _assertSuccessfulRefactoring(r'''
+main() {
+  print(5 + 1);
 }
 ''');
   }
@@ -1150,6 +1281,11 @@ main(bool p, bool p2, bool p3) {
           RefactoringProblemSeverity.FATAL,
           expectedMessage: message);
     });
+  }
+
+  Future _assertInvalidSelection() {
+    return _assertConditionsFatal(
+        'Method declaration or reference must be selected to activate this refactoring.');
   }
 
   Future _assertSuccessfulRefactoring(String expectedCode) {

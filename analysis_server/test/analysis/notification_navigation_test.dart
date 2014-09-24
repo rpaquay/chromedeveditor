@@ -2,16 +2,16 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
-library test.domain.analysis.notification.navigation;
+library test.analysis.notification.navigation;
 
 import 'dart:async';
 
 import 'package:analysis_server/src/constants.dart';
 import 'package:analysis_server/src/protocol.dart';
-import 'reflective_tests.dart';
 import 'package:unittest/unittest.dart';
 
-import 'analysis_abstract.dart';
+import '../analysis_abstract.dart';
+import '../reflective_tests.dart';
 
 
 main() {
@@ -43,7 +43,7 @@ class AnalysisNotificationNavigationTest extends AbstractAnalysisTest {
     }
     fail(
         'Expected to find target (file=$file; offset=$offset; length=$length) in\n'
-            '${testRegion} in\n' '${regions.join('\n')}');
+            '${testRegion} in\n' '${testTargets.join('\n')}');
   }
 
   void assertHasOperatorRegion(String regionSearch, int regionLength,
@@ -268,7 +268,7 @@ main() {
 }
 ''');
     return prepareNavigation().then((_) {
-      assertHasRegionString('new A');
+      findRegion(findOffset('new A'), 'new A'.length, true);
       assertHasTarget('A {');
     });
   }
@@ -283,8 +283,18 @@ main() {
 }
 ''');
     return prepareNavigation().then((_) {
-      assertHasRegionString('new A.named');
-      assertHasTarget('named() {}');
+      {
+        findRegion(findOffset('new '), 'new '.length, true);
+        assertHasTarget('named() {}');
+      }
+      {
+        findRegion(findOffset('A.named();'), 'A'.length, true);
+        assertHasTarget('A {');
+      }
+      {
+        findRegion(findOffset('.named();'), '.named'.length, true);
+        assertHasTarget('named() {}');
+      }
     });
   }
 
@@ -298,8 +308,14 @@ main() {
 }
 ''');
     return prepareNavigation().then((_) {
-      assertHasRegionString('new A');
-      assertHasTarget("A() {}", 0);
+      {
+        findRegion(findOffset('new '), 'new '.length, true);
+        assertHasTarget('A() {}', 0);
+      }
+      {
+        findRegion(findOffset('A();'), 'A'.length, true);
+        assertHasTarget('A {');
+      }
     });
   }
 

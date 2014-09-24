@@ -597,6 +597,8 @@ class CodegenJavaType extends CodegenJavaVisitor {
       return 'getAsBoolean';
     } else if (name == 'int' || name == 'Integer') {
       return 'getAsInt';
+    } else if (name == 'long' || name == 'Long') {
+      return 'getAsLong';
     } else if (name.startsWith('List')) {
       return 'getAsJsonArray';
     } else {
@@ -630,7 +632,7 @@ class CodegenJavaType extends CodegenJavaVisitor {
       TypeDecl listItemType = (field.type as TypeList).itemType;
       String jsonArrayName = 'jsonArray${capitalize(name)}';
       writeln('JsonArray ${jsonArrayName} = new JsonArray();');
-      writeln('for(${javaType(listItemType)} elt : ${name}) {');
+      writeln('for (${javaType(listItemType)} elt : ${name}) {');
       indent(() {
         if (isDeclaredInSpec(listItemType)) {
           writeln('${jsonArrayName}.add(elt.toJson());');
@@ -688,7 +690,8 @@ final GeneratedDirectory targetDir = new GeneratedDirectory(pathToGenTypes, () {
           // configure accessors
           bool generateGetters = true;
           bool generateSetters = false;
-          if (isRefactoringOption) {
+          if (isRefactoringOption ||
+              typeNameInSpec == 'RefactoringMethodParameter') {
             generateSetters = true;
           }
           // create the visitor

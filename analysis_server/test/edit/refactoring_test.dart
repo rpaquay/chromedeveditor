@@ -18,12 +18,128 @@ import '../reflective_tests.dart';
 
 main() {
   groupSep = ' | ';
+  runReflectiveTests(ConvertMethodToGetterTest);
   runReflectiveTests(ExtractLocalVariableTest);
   runReflectiveTests(ExtractMethodTest);
+  runReflectiveTests(GetAvailableRefactoringsTest);
   runReflectiveTests(InlineLocalTest);
   runReflectiveTests(InlineMethodTest);
-  runReflectiveTests(GetAvailableRefactoringsTest);
+  runReflectiveTests(MoveFileTest);
   runReflectiveTests(RenameTest);
+}
+
+
+@ReflectiveTestCase()
+class ConvertMethodToGetterTest extends _AbstractGetRefactoring_Test {
+  test_function() {
+    addTestFile('''
+int test() => 42;
+main() {
+  var a = 1 + test();
+  var b = 2 + test();
+}
+''');
+    return assertSuccessfulRefactoring(() {
+      return _sendConvertRequest('test() =>');
+    }, '''
+int get test => 42;
+main() {
+  var a = 1 + test;
+  var b = 2 + test;
+}
+''');
+  }
+
+  test_init_fatalError_hasParameters() {
+    addTestFile('''
+int test(p) => p + 1;
+main() {
+  var v = test(2);
+}
+''');
+    return getRefactoringResult(() {
+      return _sendConvertRequest('test(p)');
+    }).then((result) {
+      assertResultProblemsFatal(
+          result.initialProblems,
+          'Only methods without parameters can be converted to getters.');
+      // ...there is no any change
+      expect(result.change, isNull);
+    });
+  }
+
+  test_init_fatalError_notExecutableElement() {
+    addTestFile('''
+main() {
+  int abc = 1;
+  print(abc);
+}
+''');
+    return getRefactoringResult(() {
+      return _sendConvertRequest('abc');
+    }).then((result) {
+      assertResultProblemsFatal(
+          result.initialProblems,
+          'Unable to create a refactoring');
+      // ...there is no any change
+      expect(result.change, isNull);
+    });
+  }
+
+  test_method() {
+    addTestFile('''
+class A {
+  int test() => 1;
+}
+class B extends A {
+  int test() => 2;
+}
+class C extends B {
+  int test() => 3;
+}
+class D extends A {
+  int test() => 4;
+}
+main(A a, B b, C c, D d) {
+  var va = a.test();
+  var vb = b.test();
+  var vc = c.test();
+  var vd = d.test();
+}
+''');
+    return assertSuccessfulRefactoring(() {
+      return _sendConvertRequest('test() => 2');
+    }, '''
+class A {
+  int get test => 1;
+}
+class B extends A {
+  int get test => 2;
+}
+class C extends B {
+  int get test => 3;
+}
+class D extends A {
+  int get test => 4;
+}
+main(A a, B b, C c, D d) {
+  var va = a.test;
+  var vb = b.test;
+  var vc = c.test;
+  var vd = d.test;
+}
+''');
+  }
+
+  Future<Response> _sendConvertRequest(String search) {
+    Request request = new EditGetRefactoringParams(
+        RefactoringKind.CONVERT_METHOD_TO_GETTER,
+        testFile,
+        findOffset(search),
+        0,
+        false).toRequest('0');
+    return serverChannel.sendRequest(request);
+  }
 }
 
 
@@ -97,7 +213,7 @@ main() {
       return sendStringRequest('1 + 2', 'Name', true);
     }).then((result) {
       assertResultProblemsWarning(
-          result,
+          result.optionsProblems,
           'Variable name should start with a lowercase letter.');
       // ...but there is still a change
       assertTestRefactoringResult(result, '''
@@ -561,7 +677,7 @@ main() {
       return _sendInlineRequest('main() {}');
     }).then((result) {
       assertResultProblemsFatal(
-          result,
+          result.initialProblems,
           'Local variable declaration or reference must be selected to activate this refactoring.');
       // ...there is no any change
       expect(result.change, isNull);
@@ -584,13 +700,35 @@ main() {
 class InlineMethodTest extends _AbstractGetRefactoring_Test {
   InlineMethodOptions options = new InlineMethodOptions(true, true);
 
+  test_feedback() {
+    addTestFile('''
+class A {
+  int f;
+  test(int p) {
+    print(f + p);
+  }
+  main() {
+    test(1);
+  }
+}
+''');
+    return getRefactoringResult(() {
+      return _sendInlineRequest('test(int p)');
+    }).then((result) {
+      InlineMethodFeedback feedback = result.feedback;
+      expect(feedback.className, 'A');
+      expect(feedback.methodName, 'test');
+      expect(feedback.isDeclaration, isTrue);
+    });
+  }
+
   test_init_fatalError_noMethod() {
     addTestFile('// nothing to inline');
     return getRefactoringResult(() {
       return _sendInlineRequest('// nothing');
     }).then((result) {
       assertResultProblemsFatal(
-          result,
+          result.initialProblems,
           'Method declaration or reference must be selected to activate this refactoring.');
       // ...there is no any change
       expect(result.change, isNull);
@@ -677,6 +815,38 @@ main() {
         RefactoringKind.INLINE_METHOD,
         testFile,
         findOffset(search),
+        0,
+        false,
+        options: options).toRequest('0');
+    return serverChannel.sendRequest(request);
+  }
+}
+
+
+@ReflectiveTestCase()
+class MoveFileTest extends _AbstractGetRefactoring_Test {
+  MoveFileOptions options = new MoveFileOptions(null);
+
+  test_OK() {
+    resourceProvider.newFile('/project/bin/lib.dart', '');
+    addTestFile('''
+import 'dart:math';
+import 'lib.dart';
+''');
+    options.newFile = '/project/test.dart';
+    return assertSuccessfulRefactoring(() {
+      return _sendMoveRequest();
+    }, '''
+import 'dart:math';
+import 'bin/lib.dart';
+''');
+  }
+
+  Future<Response> _sendMoveRequest() {
+    Request request = new EditGetRefactoringParams(
+        RefactoringKind.MOVE_FILE,
+        testFile,
+        0,
         0,
         false,
         options: options).toRequest('0');
@@ -780,6 +950,31 @@ class A {
 ''');
   }
 
+  test_class_fromInstanceCreation() {
+    addTestFile('''
+class Test {
+  Test() {}
+  Test.named() {}
+}
+main() {
+  new Test();
+  new Test.named();
+}
+''');
+    return assertSuccessfulRefactoring(() {
+      return sendRenameRequest('Test();', 'NewName');
+    }, '''
+class NewName {
+  NewName() {}
+  NewName.named() {}
+}
+main() {
+  new NewName();
+  new NewName.named();
+}
+''');
+  }
+
   test_class_options_fatalError() {
     addTestFile('''
 class Test {}
@@ -790,7 +985,9 @@ main() {
     return getRefactoringResult(() {
       return sendRenameRequest('Test {}', '');
     }).then((result) {
-      assertResultProblemsFatal(result, 'Class name must not be empty.');
+      assertResultProblemsFatal(
+          result.optionsProblems,
+          'Class name must not be empty.');
       // ...there is no any change
       expect(result.change, isNull);
     });
@@ -825,7 +1022,7 @@ main() {
       return sendRenameRequest('Test {}', 'newName');
     }).then((result) {
       assertResultProblemsWarning(
-          result,
+          result.optionsProblems,
           'Class name should start with an uppercase letter.');
       // ...but there is still a change
       assertTestRefactoringResult(result, '''
@@ -851,7 +1048,7 @@ main() {
     });
   }
 
-  test_constructor() {
+  test_constructor_fromInstanceCreation() {
     addTestFile('''
 class A {
   A.test() {}
@@ -915,7 +1112,9 @@ main() {
     return getRefactoringResult(() {
       return sendRenameRequest('// nothing', null);
     }).then((result) {
-      assertResultProblemsFatal(result, 'Unable to create a refactoring');
+      assertResultProblemsFatal(
+          result.initialProblems,
+          'Unable to create a refactoring');
       // ...there is no any change
       expect(result.change, isNull);
     });
@@ -951,9 +1150,46 @@ main() {
 }
 ''');
     return getRefactoringResult(() {
-      return sendRenameRequest('test = 0', 'newName');
+      return sendRenameRequest('test = 0', 'newName', false);
     }).then((result) {
-      assertResultProblemsError(result, "Duplicate local variable 'newName'.");
+      List<RefactoringProblem> problems = result.finalProblems;
+      expect(problems, hasLength(1));
+      assertResultProblemsError(
+          problems,
+          "Duplicate local variable 'newName'.");
+    });
+  }
+
+  test_resetOnAnalysis() {
+    addTestFile('''
+main() {
+  int initialName = 0;
+  print(initialName);
+}
+''');
+    // send the first request
+    return getRefactoringResult(() {
+      return sendRenameRequest('initialName =', 'newName', true);
+    }).then((result) {
+      RenameFeedback feedback = result.feedback;
+      expect(feedback.oldName, 'initialName');
+      // update the file
+      modifyTestFile('''
+main() {
+  int otherName = 0;
+  print(otherName);
+}
+''');
+      // send the second request, with the same kind, file and offset
+      return waitForTasksFinished().then((_) {
+        return getRefactoringResult(() {
+          return sendRenameRequest('otherName =', 'newName', true);
+        }).then((result) {
+          RenameFeedback feedback = result.feedback;
+          // the refactoring was reset, so we don't get a stale result
+          expect(feedback.oldName, 'otherName');
+        });
+      });
     });
   }
 }
@@ -962,13 +1198,11 @@ main() {
 @ReflectiveTestCase()
 class _AbstractGetRefactoring_Test extends AbstractAnalysisTest {
   /**
-   * Asserts that [result] has a single ERROR problem.
+   * Asserts that [problems] has a single ERROR problem.
    */
-  void assertResultProblemsError(EditGetRefactoringResult result,
+  void assertResultProblemsError(List<RefactoringProblem> problems,
       [String message]) {
-    List<RefactoringProblem> problems = result.problems;
     RefactoringProblem problem = problems[0];
-    expect(problems, hasLength(1));
     expect(
         problem.severity,
         RefactoringProblemSeverity.ERROR,
@@ -981,9 +1215,8 @@ class _AbstractGetRefactoring_Test extends AbstractAnalysisTest {
   /**
    * Asserts that [result] has a single FATAL problem.
    */
-  void assertResultProblemsFatal(EditGetRefactoringResult result,
+  void assertResultProblemsFatal(List<RefactoringProblem> problems,
       [String message]) {
-    List<RefactoringProblem> problems = result.problems;
     RefactoringProblem problem = problems[0];
     expect(problems, hasLength(1));
     expect(
@@ -999,15 +1232,16 @@ class _AbstractGetRefactoring_Test extends AbstractAnalysisTest {
    * Asserts that [result] has no problems at all.
    */
   void assertResultProblemsOK(EditGetRefactoringResult result) {
-    expect(result.problems, isEmpty);
+    expect(result.initialProblems, isEmpty);
+    expect(result.optionsProblems, isEmpty);
+    expect(result.finalProblems, isEmpty);
   }
 
   /**
    * Asserts that [result] has a single WARNING problem.
    */
-  void assertResultProblemsWarning(EditGetRefactoringResult result,
+  void assertResultProblemsWarning(List<RefactoringProblem> problems,
       [String message]) {
-    List<RefactoringProblem> problems = result.problems;
     RefactoringProblem problem = problems[0];
     expect(problems, hasLength(1));
     expect(

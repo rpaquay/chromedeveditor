@@ -5,10 +5,10 @@
 library test.context.directory.manager;
 
 import 'package:analysis_server/src/context_manager.dart';
-import 'package:analysis_server/src/package_map_provider.dart';
 import 'reflective_tests.dart';
 import 'package:analyzer/file_system/file_system.dart';
 import 'package:analyzer/file_system/memory_file_system.dart';
+import 'package:analyzer/source/package_map_provider.dart';
 import 'package:analyzer/src/generated/engine.dart';
 import 'package:analyzer/src/generated/source.dart';
 import 'package:path/path.dart';
@@ -76,6 +76,47 @@ class ContextManagerTest {
   void test_isInAnalysisRoot_notInRoot() {
     manager.setRoots(<String>[projPath], <String>[]);
     expect(manager.isInAnalysisRoot('/test.dart'), isFalse);
+  }
+
+  test_refresh_folder_with_pubspec() {
+    // create a context with a pubspec.yaml file
+    String pubspecPath = posix.join(projPath, 'pubspec.yaml');
+    resourceProvider.newFile(pubspecPath, 'pubspec');
+    manager.setRoots(<String>[projPath], <String>[]);
+    return pumpEventQueue().then((_) {
+      expect(manager.currentContextPaths.toList(), [projPath]);
+      manager.now++;
+      manager.refresh();
+      return pumpEventQueue().then((_) {
+        expect(manager.currentContextPaths.toList(), [projPath]);
+        expect(manager.currentContextTimestamps[projPath], manager.now);
+      });
+    });
+  }
+
+  test_refresh_folder_with_pubspec_subfolders() {
+    // Create a folder with no pubspec.yaml, containing two subfolders with
+    // pubspec.yaml files.
+    String subdir1Path = posix.join(projPath, 'subdir1');
+    String subdir2Path = posix.join(projPath, 'subdir2');
+    String pubspec1Path = posix.join(subdir1Path, 'pubspec.yaml');
+    String pubspec2Path = posix.join(subdir2Path, 'pubspec.yaml');
+    resourceProvider.newFile(pubspec1Path, 'pubspec');
+    resourceProvider.newFile(pubspec2Path, 'pubspec');
+    manager.setRoots(<String>[projPath], <String>[]);
+    return pumpEventQueue().then((_) {
+      expect(manager.currentContextPaths.toSet(),
+          [subdir1Path, subdir2Path, projPath].toSet());
+      manager.now++;
+      manager.refresh();
+      return pumpEventQueue().then((_) {
+        expect(manager.currentContextPaths.toSet(),
+          [subdir1Path, subdir2Path, projPath].toSet());
+        expect(manager.currentContextTimestamps[projPath], manager.now);
+        expect(manager.currentContextTimestamps[subdir1Path], manager.now);
+        expect(manager.currentContextTimestamps[subdir2Path], manager.now);
+      });
+    });
   }
 
   void test_setRoots_addFolderWithDartFile() {
@@ -638,7 +679,15 @@ class TestContextManager extends ContextManager {
    */
   int now = 0;
 
-  final Set<String> currentContextPaths = new Set<String>();
+  /**
+   * Map from context to the timestamp when the context was created.
+   */
+  Map<String, int> currentContextTimestamps = <String, int>{};
+
+  /**
+   * Iterable of the paths to contexts that currently exist.
+   */
+  Iterable<String> get currentContextPaths => currentContextTimestamps.keys;
 
   /**
    * Map from context to (map from file path to timestamp of last event).
@@ -659,7 +708,8 @@ class TestContextManager extends ContextManager {
   @override
   void addContext(Folder folder, Map<String, List<Folder>> packageMap) {
     String path = folder.path;
-    currentContextPaths.add(path);
+    expect(currentContextPaths, isNot(contains(path)));
+    currentContextTimestamps[path] = now;
     currentContextFilePaths[path] = <String, int>{};
     currentContextPackageMaps[path] = packageMap;
   }
@@ -693,7 +743,8 @@ class TestContextManager extends ContextManager {
   @override
   void removeContext(Folder folder) {
     String path = folder.path;
-    currentContextPaths.remove(path);
+    expect(currentContextPaths, contains(path));
+    currentContextTimestamps.remove(path);
     currentContextFilePaths.remove(path);
     currentContextPackageMaps.remove(path);
   }

@@ -13,8 +13,10 @@ import 'package:analyzer/src/generated/source.dart';
 
 class MockSdk implements DartSdk {
   static const _MockSdkLibrary LIB_CORE =
-      const _MockSdkLibrary('core', '/lib/core/core.dart', '''
+      const _MockSdkLibrary('dart:core', '/lib/core/core.dart', '''
 library dart.core;
+
+import 'dart:async';
 
 class Object {
   bool operator ==(other) => identical(this, other);
@@ -71,8 +73,11 @@ void print(Object object) {}
 ''');
 
   static const _MockSdkLibrary LIB_ASYNC =
-      const _MockSdkLibrary('async', '/lib/async/async.dart', '''
+      const _MockSdkLibrary('dart:async', '/lib/async/async.dart', '''
 library dart.async;
+
+import 'dart:math';
+
 class Future {
   static Future wait(List<Future> futures) => null;
 }
@@ -81,7 +86,7 @@ class Stream<T> {}
 ''');
 
   static const _MockSdkLibrary LIB_MATH =
-      const _MockSdkLibrary('math', '/lib/math/math.dart', '''
+      const _MockSdkLibrary('dart:math', '/lib/math/math.dart', '''
 library dart.math;
 const double E = 2.718281828459045;
 const double PI = 3.1415926535897932;
@@ -91,7 +96,7 @@ class Random {}
 ''');
 
   static const _MockSdkLibrary LIB_HTML =
-      const _MockSdkLibrary('html', '/lib/html/dartium/html_dartium.dart', '''
+      const _MockSdkLibrary('dart:html', '/lib/html/dartium/html_dartium.dart', '''
 library dart.html;
 class HtmlElement {}
 ''');
@@ -105,6 +110,11 @@ class HtmlElement {}
   final resource.MemoryResourceProvider provider =
       new resource.MemoryResourceProvider();
 
+  /**
+   * The [AnalysisContext] which is used for all of the sources.
+   */
+  InternalAnalysisContext _analysisContext;
+
   MockSdk() {
     LIBRARIES.forEach((_MockSdkLibrary library) {
       provider.newFile(library.path, library.content);
@@ -112,7 +122,20 @@ class HtmlElement {}
   }
 
   @override
-  AnalysisContext get context => throw unimplemented;
+  AnalysisContext get context {
+    if (_analysisContext == null) {
+      _analysisContext = new SdkAnalysisContext();
+      SourceFactory factory = new SourceFactory([new DartUriResolver(this)]);
+      _analysisContext.sourceFactory = factory;
+      ChangeSet changeSet = new ChangeSet();
+      for (String uri in uris) {
+        Source source = factory.forUri(uri);
+        changeSet.addedSource(source);
+      }
+      _analysisContext.applyChanges(changeSet);
+    }
+    return _analysisContext;
+  }
 
   @override
   List<SdkLibrary> get sdkLibraries => LIBRARIES;
@@ -123,7 +146,13 @@ class HtmlElement {}
   UnimplementedError get unimplemented => new UnimplementedError();
 
   @override
-  List<String> get uris => throw unimplemented;
+  List<String> get uris {
+    List<String> uris = <String>[];
+    for (SdkLibrary library in LIBRARIES) {
+      uris.add(library.shortName);
+    }
+    return uris;
+  }
 
   @override
   Source fromFileUri(Uri uri) {
@@ -138,7 +167,7 @@ class HtmlElement {}
         String path = library.shortName;
         try {
           resource.File file = provider.getResource(uri.path);
-          Uri dartUri = new Uri(scheme: 'dart', path: library.shortName);
+          Uri dartUri = new Uri(scheme: 'dart', path: path);
           return file.createSource(dartUri);
         } catch (exception) {
           return null;

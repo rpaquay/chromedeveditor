@@ -1223,11 +1223,30 @@
           </field>
         </params>
         <result>
-          <field name="problems">
+          <field name="initialProblems">
             <list><ref>RefactoringProblem</ref></list>
             <p>
-              The status of the refactoring. The array will be empty
-              if there are no known problems.
+              The initial status of the refactoring, i.e. problems related to
+              the context in which the refactoring is requested.
+              The array will be empty if there are no known problems.
+            </p>
+          </field>
+          <field name="optionsProblems">
+            <list><ref>RefactoringProblem</ref></list>
+            <p>
+              The options validation status, i.e. problems in the given options,
+              such as light-weight validation of a new name, flags
+              compatibility, etc.
+              The array will be empty if there are no known problems.
+            </p>
+          </field>
+          <field name="finalProblems">
+            <list><ref>RefactoringProblem</ref></list>
+            <p>
+              The final status of the refactoring, i.e. problems identified in
+              the result of a full, potentially expensive validation and / or
+              change creation.
+              The array will be empty if there are no known problems.
             </p>
           </field>
           <field name="feedback" optional="true">
@@ -1380,7 +1399,7 @@
       </request>
       <notification event="launchData">
         <p>
-          Reports information needed to allow applications to be launched.
+          Reports information needed to allow a single file to be launched.
         </p>
         <p>
           This notification is not subscribed to by default. Clients can
@@ -1388,35 +1407,25 @@
           passed in an <tt>execution.setSubscriptions</tt> request.
         </p>
         <params>
-          <field name="executables">
-            <list><ref>ExecutableFile</ref></list>
+          <field name="file">
+            <ref>FilePath</ref>
             <p>
-              A list of the files that are executable. This list replaces any
-              previous list provided.
+              The file for which launch data is being provided. This will either
+              be a Dart library or an HTML file.
             </p>
           </field>
-          <field name="dartToHtml">
-            <map>
-              <key><ref>FilePath</ref></key>
-              <value>
-                <list><ref>FilePath</ref></list>
-              </value>
-            </map>
+          <field name="kind" optional="true">
+            <ref>ExecutableKind</ref>
             <p>
-              A mapping from the paths of Dart files that are referenced by HTML
-              files to a list of the HTML files that reference the Dart files.
+              The kind of the executable file. This field is omitted if the file
+              is not a Dart file.
             </p>
           </field>
-          <field name="htmlToDart">
-            <map>
-              <key><ref>FilePath</ref></key>
-              <value>
-                <list><ref>FilePath</ref></list>
-              </value>
-            </map>
+          <field name="referencedFiles" optional="true">
+            <list><ref>FilePath</ref></list>
             <p>
-              A mapping from the paths of HTML files that reference Dart files
-              to a list of the Dart files they reference.
+              A list of the Dart files that are referenced by the file. This
+              field is omitted if the file is not an HTML file.
             </p>
           </field>
         </params>
@@ -1527,8 +1536,10 @@
           An enumeration of the possible types of analysis errors.
         </p>
         <enum>
+          <value><code>ANGULAR</code></value>
           <value><code>COMPILE_TIME_ERROR</code></value>
           <value><code>HINT</code></value>
+          <value><code>POLYMER</code></value>
           <value><code>STATIC_TYPE_WARNING</code></value>
           <value><code>STATIC_WARNING</code></value>
           <value><code>SYNTACTIC_ERROR</code></value>
@@ -1740,6 +1751,12 @@
               of a class.
             </p>
           </field>
+          <field name="element" optional="true">
+            <ref>Element</ref>
+            <p>
+              Information about the element reference being suggested.
+            </p>
+          </field>
           <field name="returnType" optional="true">
             <ref>String</ref>
             <p>
@@ -1813,6 +1830,7 @@
           <value><code>GETTER</code></value>
           <value><code>IMPORT</code></value>
           <value><code>KEYWORD</code></value>
+          <value><code>LABEL</code></value>
           <value><code>LIBRARY_PREFIX</code></value>
           <value><code>LOCAL_VARIABLE</code></value>
           <value><code>METHOD</code></value>
@@ -1898,10 +1916,12 @@
           <value><code>FUNCTION</code></value>
           <value><code>FUNCTION_TYPE_ALIAS</code></value>
           <value><code>GETTER</code></value>
+          <value><code>LABEL</code></value>
           <value><code>LIBRARY</code></value>
           <value><code>LOCAL_VARIABLE</code></value>
           <value><code>METHOD</code></value>
           <value><code>PARAMETER</code></value>
+          <value><code>PREFIX</code></value>
           <value><code>SETTER</code></value>
           <value><code>TOP_LEVEL_VARIABLE</code></value>
           <value><code>TYPE_PARAMETER</code></value>
@@ -1936,6 +1956,7 @@
         <enum>
           <value><code>CLIENT</code></value>
           <value><code>EITHER</code></value>
+          <value><code>NOT_EXECUTABLE</code></value>
           <value><code>SERVER</code></value>
         </enum>
       </type>
@@ -2047,6 +2068,7 @@
           <value><code>IDENTIFIER_DEFAULT</code></value>
           <value><code>IMPORT_PREFIX</code></value>
           <value><code>KEYWORD</code></value>
+          <value><code>LABEL</code></value>
           <value><code>LITERAL_BOOLEAN</code></value>
           <value><code>LITERAL_DOUBLE</code></value>
           <value><code>LITERAL_INTEGER</code></value>
@@ -2443,7 +2465,9 @@
           <value><code>EXTRACT_METHOD</code></value>
           <value><code>INLINE_LOCAL_VARIABLE</code></value>
           <value><code>INLINE_METHOD</code></value>
+          <value><code>MOVE_FILE</code></value>
           <value><code>RENAME</code></value>
+          <value><code>SORT_MEMBERS</code></value>
         </enum>
       </type>
       <type name="RefactoringMethodParameter">
@@ -2585,11 +2609,11 @@
               A short description of the error.
             </p>
           </field>
-          <field name="data" optional="true">
-            <ref>object</ref>
+          <field name="stackTrace" optional="true">
+            <ref>String</ref>
             <p>
-              Additional data related to the error. This field is
-              omitted if there is no additional data available.
+              The stack trace associated with processing the request,
+              used for debugging the server.
             </p>
           </field>
         </object>
@@ -2639,6 +2663,13 @@
               This error is included for future expansion; at present
               the analysis server can only speak to one client at a
               time so this error will never occur.
+            </p>
+          </value>
+          <value>
+            <code>SERVER_ERROR</code>
+            <p>
+              An internal error occurred in the analysis server.
+              Also see the server.error notification.
             </p>
           </value>
           <value>
@@ -2866,6 +2897,16 @@
             <ref>FilePath</ref>
             <p>
               The file containing the code to be modified.
+            </p>
+          </field>
+          <field name="fileStamp">
+            <ref>long</ref>
+            <p>
+              The modification stamp of the file at the moment when the change
+              was created, in milliseconds since the "Unix epoch". Will be -1 if
+              the file did not exist and should be created. The client may use
+              this field to make sure that the file was not changed since then,
+              so it is safe to apply the change.
             </p>
           </field>
           <field name="edits">
@@ -3129,7 +3170,7 @@
             </p>
             <ul>
               <li>
-                To change the order and/or update proposed paramerers, add
+                To change the order and/or update proposed parameters, add
                 parameters with the same identifiers as proposed.
               </li>
               <li>To add new parameters, omit their identifier.</li>
@@ -3180,13 +3221,34 @@
           It is an error if the range contains anything other than all
           or part of the name of a single method.
         </p>
+        <feedback>
+          <field name="className" optional="true">
+            <ref>String</ref>
+            <p>
+              The name of the class enclosing the method being inlined.
+              If not a class member is being inlined, this field will be absent.
+            </p>
+          </field>
+          <field name="methodName">
+            <ref>String</ref>
+            <p>
+              The name of the method (or function) being inlined.
+            </p>
+          </field>
+          <field name="isDeclaration">
+            <ref>bool</ref>
+            <p>
+              True if the declaration of the method is selected.
+              So all references should be inlined.
+            </p>
+          </field>
+        </feedback>
         <options>
           <field name="deleteSource">
             <ref>bool</ref>
             <p>
-              True if the method being inlined should be removed. It
-              is an error if this field is true and inlineAll is
-              false.
+              True if the method being inlined should be removed.
+              It is an error if this field is true and inlineAll is false.
             </p>
           </field>
           <field name="inlineAll">
@@ -3195,6 +3257,30 @@
               True if all invocations of the method should be inlined,
               or false if only the invocation site used to create this
               refactoring should be inlined.
+            </p>
+          </field>
+        </options>
+      </refactoring>
+      <refactoring kind="MOVE_FILE">
+        <p>
+          Move the given file and update all of the references to that file
+          and from it. The move operation is supported in general case - for
+          renaming a file in the same folder, moving it to a different folder
+          or both.
+        </p>
+        <p>
+          The refactoring must be activated before an actual file moving
+          operation is performed.
+        </p>
+        <p>
+          The "offset" and "length" fields from the request are ignored, but the
+          file specified in the request specifies the file to be moved.
+        </p>
+        <options>
+          <field name="newFile">
+            <ref>FilePath</ref>
+            <p>
+              The new file path to which the given file is being moved.
             </p>
           </field>
         </options>
@@ -3248,6 +3334,16 @@
             </p>
           </field>
         </options>
+      </refactoring>
+      <refactoring kind=SORT_MEMBERS>
+        <p>
+          Sort all of the directives, unit and class members
+          of the given Dart file.
+        </p>
+        <p>
+          The "offset" and "length" fields from the request are ignored, but the
+          file specified in the request specifies the file to be sorted.
+        </p>
       </refactoring>
     </refactorings>
     <h2>Errors</h2>

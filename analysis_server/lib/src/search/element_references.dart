@@ -50,8 +50,8 @@ class ElementReferencesComputer {
     return _getRefElements(element).then((Iterable<Element> refElements) {
       var futureGroup = new _ConcatFutureGroup<SearchResult>();
       for (Element refElement in refElements) {
-        // add variable declaration
-        if (_isVariableLikeElement(refElement)) {
+        // add declaration
+        if (_isDeclarationInteresting(refElement)) {
           SearchResult searchResult = _newDeclarationResult(refElement);
           futureGroup.add(searchResult);
         }
@@ -106,14 +106,23 @@ class ElementReferencesComputer {
   }
 
   static bool _isMemberElement(Element element) {
+    if (element is ConstructorElement) {
+      return false;
+    }
     return element.enclosingElement is ClassElement;
   }
 
-  static bool _isVariableLikeElement(Element element) {
+  static bool _isDeclarationInteresting(Element element) {
+    if (element is LabelElement) {
+      return true;
+    }
     if (element is LocalVariableElement) {
       return true;
     }
     if (element is ParameterElement) {
+      return true;
+    }
+    if (element is PrefixElement) {
       return true;
     }
     if (element is PropertyInducingElement) {

@@ -7,9 +7,9 @@ library test.search.element_references;
 import 'dart:async';
 
 import 'package:analysis_server/src/protocol.dart';
-import '../reflective_tests.dart';
 import 'package:unittest/unittest.dart';
 
+import '../reflective_tests.dart';
 import 'abstract_search_domain.dart';
 
 
@@ -22,6 +22,11 @@ main() {
 @ReflectiveTestCase()
 class ElementReferencesTest extends AbstractSearchDomainTest {
   Element searchElement;
+
+  void assertHasRef(SearchResultKind kind, String search, bool isPotential) {
+    assertHasResult(kind, search);
+    expect(result.isPotential, isPotential);
+  }
 
   Future findElementReferences(String search, bool includePotential) {
     int offset = findOffset(search);
@@ -60,7 +65,32 @@ main() {
     });
   }
 
-  test_constructor_unamed() {
+  test_constructor_named_potential() {
+    // Constructors in other classes shouldn't be considered potential matches,
+    // nor should unresolved method calls, since constructor call sites are
+    // statically bound to their targets).
+    addTestFile('''
+class A {
+  A.named(p); // A
+}
+class B {
+  B.named(p);
+}
+f(x) {
+  new A.named(1);
+  new B.named(2);
+  x.named(3);
+}
+''');
+    return findElementReferences('named(p); // A', true).then((_) {
+      expect(searchElement.kind, ElementKind.CONSTRUCTOR);
+      assertHasResult(SearchResultKind.DECLARATION, '.named(p)', 6);
+      assertHasResult(SearchResultKind.REFERENCE, '.named(1)', 6);
+      expect(results, hasLength(2));
+    });
+  }
+
+  test_constructor_unnamed() {
     addTestFile('''
 class A {
   A(p);
@@ -74,6 +104,36 @@ main() {
       expect(searchElement.kind, ElementKind.CONSTRUCTOR);
       assertHasResult(SearchResultKind.REFERENCE, '(1)', 0);
       assertHasResult(SearchResultKind.REFERENCE, '(2)', 0);
+    });
+  }
+
+  test_constructor_unnamed_potential() {
+    // Constructors in other classes shouldn't be considered potential matches,
+    // even if they are also unnamed (since constructor call sites are
+    // statically bound to their targets).
+    // Also, assignments to local variables shouldn't be considered potential
+    // matches.
+    addTestFile('''
+class A {
+  A(p); // A
+}
+class B {
+  B(p);
+  foo() {
+    int k;
+    k = 3;
+  }
+}
+main() {
+  new A(1);
+  new B(2);
+}
+''');
+    return findElementReferences('A(p)', true).then((_) {
+      expect(searchElement.kind, ElementKind.CONSTRUCTOR);
+      assertHasResult(SearchResultKind.DECLARATION, '(p); // A', 0);
+      assertHasResult(SearchResultKind.REFERENCE, '(1)', 0);
+      expect(results, hasLength(2));
     });
   }
 
@@ -186,21 +246,21 @@ main() {
 
   test_hierarchy_field_explicit() {
     addTestFile('''
-class A {
-  int fff; // in A
-}
-class B extends A {
-  int fff; // in B
-}
-class C extends B {
-  int fff; // in C
-}
-main(A a, B b, C c) {
-  a.fff = 10;
-  b.fff = 20;
-  c.fff = 30;
-}
-''');
+  class A {
+    int fff; // in A
+  }
+  class B extends A {
+    int fff; // in B
+  }
+  class C extends B {
+    int fff; // in C
+  }
+  main(A a, B b, C c) {
+    a.fff = 10;
+    b.fff = 20;
+    c.fff = 30;
+  }
+  ''');
     return findElementReferences('fff; // in B', false).then((_) {
       expect(searchElement.kind, ElementKind.FIELD);
       assertHasResult(SearchResultKind.DECLARATION, 'fff; // in A');
@@ -234,6 +294,46 @@ main(A a, B b, C c) {
       assertHasResult(SearchResultKind.INVOCATION, 'mmm(10)');
       assertHasResult(SearchResultKind.INVOCATION, 'mmm(20)');
       assertHasResult(SearchResultKind.INVOCATION, 'mmm(30)');
+    });
+  }
+
+  test_prefix() {
+    addTestFile('''
+import 'dart:async' as ppp;
+main() {
+  ppp.Future a;
+  ppp.Stream b;
+}
+''');
+    return findElementReferences("ppp;", false).then((_) {
+      expect(searchElement.kind, ElementKind.PREFIX);
+      expect(searchElement.name, 'ppp');
+      expect(searchElement.location.startLine, 1);
+      expect(results, hasLength(3));
+      assertHasResult(SearchResultKind.DECLARATION, 'ppp;');
+      assertHasResult(SearchResultKind.REFERENCE, 'ppp.Future');
+      assertHasResult(SearchResultKind.REFERENCE, 'ppp.Stream');
+    });
+  }
+
+  test_label() {
+    addTestFile('''
+main() {
+myLabel:
+  for (int i = 0; i < 10; i++) {
+    if (i == 2) {
+      continue myLabel; // continue
+    }
+    break myLabel; // break
+  }
+}
+''');
+    return findElementReferences('myLabel; // break', false).then((_) {
+      expect(searchElement.kind, ElementKind.LABEL);
+      expect(results, hasLength(3));
+      assertHasResult(SearchResultKind.DECLARATION, 'myLabel:');
+      assertHasResult(SearchResultKind.REFERENCE, 'myLabel; // continue');
+      assertHasResult(SearchResultKind.REFERENCE, 'myLabel; // break');
     });
   }
 
@@ -508,6 +608,30 @@ main(A a, p) {
         assertHasResult(SearchResultKind.INVOCATION, 'test(2);');
         expect(result.isPotential, isTrue);
       }
+    });
+  }
+
+  test_potential_method_definedInSubclass() {
+    addTestFile('''
+class Base {
+  methodInBase() {
+    test(1);
+  }
+}
+class Derived extends Base {
+  test(_) {} // of Derived
+  methodInDerived() {
+    test(2);
+  }
+}
+globalFunction(Base b) {
+  b.test(3);
+}
+''');
+    return findElementReferences('test(_) {} // of Derived', true).then((_) {
+      assertHasRef(SearchResultKind.INVOCATION, 'test(1);', true);
+      assertHasRef(SearchResultKind.INVOCATION, 'test(2);', false);
+      assertHasRef(SearchResultKind.INVOCATION, 'test(3);', true);
     });
   }
 

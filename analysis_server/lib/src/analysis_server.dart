@@ -14,8 +14,8 @@ import 'package:analysis_server/src/context_manager.dart';
 import 'package:analysis_server/src/operation/operation_analysis.dart';
 import 'package:analysis_server/src/operation/operation.dart';
 import 'package:analysis_server/src/operation/operation_queue.dart';
-import 'package:analysis_server/src/package_map_provider.dart';
 import 'package:analysis_server/src/protocol.dart' hide Element;
+import 'package:analyzer/source/package_map_provider.dart';
 import 'package:analyzer/source/package_map_resolver.dart';
 import 'package:analyzer/src/generated/ast.dart';
 import 'package:analyzer/src/generated/engine.dart';
@@ -37,8 +37,7 @@ class ServerContextManager extends ContextManager {
    */
   AnalysisOptionsImpl defaultOptions = new AnalysisOptionsImpl();
 
-  ServerContextManager(
-      this.analysisServer, ResourceProvider resourceProvider,
+  ServerContextManager(this.analysisServer, ResourceProvider resourceProvider,
       PackageMapProvider packageMapProvider)
       : super(resourceProvider, packageMapProvider);
 
@@ -63,14 +62,17 @@ class ServerContextManager extends ContextManager {
   @override
   void removeContext(Folder folder) {
     AnalysisContext context = analysisServer.folderMap.remove(folder);
+    if (analysisServer.index != null) {
+      analysisServer.index.removeContext(context);
+    }
     analysisServer.sendContextAnalysisDoneNotifications(
         context,
         AnalysisDoneReason.CONTEXT_REMOVED);
   }
 
   @override
-  void updateContextPackageMap(Folder contextFolder,
-                               Map<String, List<Folder>> packageMap) {
+  void updateContextPackageMap(Folder contextFolder, Map<String,
+      List<Folder>> packageMap) {
     AnalysisContext context = analysisServer.folderMap[contextFolder];
     context.sourceFactory = _createSourceFactory(packageMap);
     analysisServer.schedulePerformAnalysisOperation(context);
@@ -84,8 +86,7 @@ class ServerContextManager extends ContextManager {
     List<UriResolver> resolvers = <UriResolver>[
         new DartUriResolver(analysisServer.defaultSdk),
         new ResourceUriResolver(resourceProvider),
-        new PackageMapUriResolver(resourceProvider, packageMap)
-    ];
+        new PackageMapUriResolver(resourceProvider, packageMap)];
     return new SourceFactory(resolvers);
   }
 }
@@ -207,9 +208,19 @@ class AnalysisServer {
       new HashMap<AnalysisContext, Completer<AnalysisDoneReason>>();
 
   /**
-   * The listeners that are listening for lifecycle events from this server.
+   * The controller that is notified when analysis is started.
    */
-  List<AnalysisServerListener> listeners = <AnalysisServerListener>[];
+  StreamController<AnalysisContext> _onAnalysisStartedController;
+
+  /**
+   * The controller that is notified when analysis is complete.
+   */
+  StreamController _onAnalysisCompleteController;
+
+  /**
+   * The controller that is notified when a single file has been analyzed.
+   */
+  StreamController<ChangeNotice> _onFileAnalyzedController;
 
   /**
    * True if any exceptions thrown by analysis should be propagated up the call
@@ -231,13 +242,27 @@ class AnalysisServer {
       {this.rethrowExceptions: true}) {
     searchEngine = createSearchEngine(index);
     operationQueue = new ServerOperationQueue(this);
-    contextDirectoryManager = new ServerContextManager(
-        this, resourceProvider, packageMapProvider);
+    contextDirectoryManager =
+        new ServerContextManager(this, resourceProvider, packageMapProvider);
     AnalysisEngine.instance.logger = new AnalysisLogger();
+    _onAnalysisStartedController = new StreamController.broadcast();
+    _onAnalysisCompleteController = new StreamController.broadcast();
+    _onFileAnalyzedController = new StreamController.broadcast();
     running = true;
     Notification notification = new ServerConnectedParams().toNotification();
     channel.sendNotification(notification);
     channel.listen(handleRequest, onDone: done, onError: error);
+  }
+
+  /**
+   * If the given notice applies to a file contained within an analysis root,
+   * notify interested parties that the file has been (at least partially)
+   * analyzed.
+   */
+  void fileAnalyzed(ChangeNotice notice) {
+    if (contextDirectoryManager.isInAnalysisRoot(notice.source.fullName)) {
+      _onFileAnalyzedController.add(notice);
+    }
   }
 
   /**
@@ -255,6 +280,7 @@ class AnalysisServer {
    * Schedules analysis of the given context.
    */
   void schedulePerformAnalysisOperation(AnalysisContext context) {
+    _onAnalysisStartedController.add(context);
     scheduleOperation(new PerformAnalysisOperation(context, false));
   }
 
@@ -295,8 +321,8 @@ class AnalysisServer {
     if (unanalyzed.isNotEmpty) {
       StringBuffer buffer = new StringBuffer();
       buffer.writeAll(unanalyzed, ', ');
-      throw new RequestFailure(new Response.unanalyzedPriorityFiles(request,
-          buffer.toString()));
+      throw new RequestFailure(
+          new Response.unanalyzedPriorityFiles(request, buffer.toString()));
     }
     folderMap.forEach((Folder folder, AnalysisContext context) {
       List<Source> sourceList = sourceMap[context];
@@ -316,7 +342,8 @@ class AnalysisServer {
     // Update existing contexts.
     //
     folderMap.forEach((Folder folder, AnalysisContext context) {
-      AnalysisOptionsImpl options = new AnalysisOptionsImpl.con1(context.analysisOptions);
+      AnalysisOptionsImpl options =
+          new AnalysisOptionsImpl.con1(context.analysisOptions);
       optionUpdaters.forEach((OptionUpdater optionUpdater) {
         optionUpdater(options);
       });
@@ -332,14 +359,21 @@ class AnalysisServer {
   }
 
   /**
-   * Add the given [listener] to the list of listeners that are listening for
-   * lifecycle events from this server.
+   * The stream that is notified when analysis of a context is started.
    */
-  void addAnalysisServerListener(AnalysisServerListener listener) {
-    if (!listeners.contains(listener)) {
-      listeners.add(listener);
-    }
+  Stream<AnalysisContext> get onAnalysisStarted {
+    return _onAnalysisStartedController.stream;
   }
+
+  /**
+   * The stream that is notified when analysis is complete.
+   */
+  Stream get onAnalysisComplete => _onAnalysisCompleteController.stream;
+
+  /**
+   * The stream that is notified when a single file has been analyzed.
+   */
+  Stream get onFileAnalyzed => _onFileAnalyzedController.stream;
 
   /**
    * Adds the given [ServerOperation] to the queue, but does not schedule
@@ -386,23 +420,35 @@ class AnalysisServer {
    * Handle a [request] that was read from the communication channel.
    */
   void handleRequest(Request request) {
-    int count = handlers.length;
-    for (int i = 0; i < count; i++) {
-      try {
-        Response response = handlers[i].handleRequest(request);
-        if (response == Response.DELAYED_RESPONSE) {
+    runZoned(() {
+      int count = handlers.length;
+      for (int i = 0; i < count; i++) {
+        try {
+          Response response = handlers[i].handleRequest(request);
+          if (response == Response.DELAYED_RESPONSE) {
+            return;
+          }
+          if (response != null) {
+            channel.sendResponse(response);
+            return;
+          }
+        } on RequestFailure catch (exception) {
+          channel.sendResponse(exception.response);
           return;
-        }
-        if (response != null) {
+        } catch (exception, stackTrace) {
+          RequestError error = new RequestError(
+              RequestErrorCode.SERVER_ERROR,
+              exception);
+          if (stackTrace != null) {
+            error.stackTrace = stackTrace.toString();
+          }
+          Response response = new Response(request.id, error: error);
           channel.sendResponse(response);
           return;
         }
-      } on RequestFailure catch (exception) {
-        channel.sendResponse(exception.response);
-        return;
       }
-    }
-    channel.sendResponse(new Response.unknownRequest(request));
+      channel.sendResponse(new Response.unknownRequest(request));
+    }, onError: _sendServerErrorNotification);
   }
 
   /**
@@ -468,17 +514,20 @@ class AnalysisServer {
         _schedulePerformOperation();
       } else {
         sendStatusNotification(null);
-        _notifyAnalysisComplete();
+        _onAnalysisCompleteController.add(null);
       }
     }
   }
 
   /**
-   * Remove the given [listener] from the list of listeners that are listening
-   * for lifecycle events from this server.
+   * Trigger reanalysis of all files from disk.
    */
-  void removeAnalysisServerListener(AnalysisServerListener listener) {
-    listeners.remove(listener);
+  void reanalyze() {
+    // Clear any operations that are pending.
+    operationQueue.clear();
+    // Instruct the contextDirectoryManager to rebuild all contexts from
+    // scratch.
+    contextDirectoryManager.refresh();
   }
 
   /**
@@ -497,8 +546,8 @@ class AnalysisServer {
     }
     statusAnalyzing = isAnalyzing;
     AnalysisStatus analysis = new AnalysisStatus(isAnalyzing);
-    channel.sendNotification(new ServerStatusParams(
-        analysis: analysis).toNotification());
+    channel.sendNotification(
+        new ServerStatusParams(analysis: analysis).toNotification());
   }
 
   /**
@@ -513,15 +562,13 @@ class AnalysisServer {
    * So, we can start working in parallel on adding services and improving
    * projects/contexts support.
    */
-  void setAnalysisRoots(String requestId,
-                        List<String> includedPaths,
-                        List<String> excludedPaths) {
+  void setAnalysisRoots(String requestId, List<String> includedPaths,
+      List<String> excludedPaths) {
     try {
       contextDirectoryManager.setRoots(includedPaths, excludedPaths);
     } on UnimplementedError catch (e) {
       throw new RequestFailure(
-                  new Response.unsupportedFeature(
-                      requestId, e.message));
+          new Response.unsupportedFeature(requestId, e.message));
     }
   }
 
@@ -542,16 +589,19 @@ class AnalysisServer {
         } else if (change is ChangeContentOverlay) {
           // TODO(paulberry): an error should be generated if source is not
           // currently in the content cache.
-          TimestampedData<String> oldContents = analysisContext.getContents(
-              source);
+          TimestampedData<String> oldContents =
+              analysisContext.getContents(source);
           String newContents;
           try {
-            newContents = SourceEdit.applySequence(oldContents.data,
-                change.edits);
+            newContents =
+                SourceEdit.applySequence(oldContents.data, change.edits);
           } on RangeError {
-            throw new RequestFailure(new Response(id, error: new RequestError(
-                RequestErrorCode.INVALID_OVERLAY_CHANGE,
-                'Invalid overlay change')));
+            throw new RequestFailure(
+                new Response(
+                    id,
+                    error: new RequestError(
+                        RequestErrorCode.INVALID_OVERLAY_CHANGE,
+                        'Invalid overlay change')));
           }
           // TODO(paulberry): to aid in incremental processing it would be
           // better to use setChangedContents.
@@ -570,11 +620,13 @@ class AnalysisServer {
   /**
    * Implementation for `analysis.setSubscriptions`.
    */
-  void setAnalysisSubscriptions(Map<AnalysisService, Set<String>> subscriptions) {
+  void setAnalysisSubscriptions(Map<AnalysisService,
+      Set<String>> subscriptions) {
     // send notifications for already analyzed sources
     subscriptions.forEach((service, Set<String> newFiles) {
       Set<String> oldFiles = analysisServices[service];
-      Set<String> todoFiles = oldFiles != null ? newFiles.difference(oldFiles) : newFiles;
+      Set<String> todoFiles =
+          oldFiles != null ? newFiles.difference(oldFiles) : newFiles;
       for (String file in todoFiles) {
         Source source = getSource(file);
         // prepare context
@@ -584,7 +636,8 @@ class AnalysisServer {
         }
         // Dart unit notifications.
         if (AnalysisEngine.isDartFileName(file)) {
-          CompilationUnit dartUnit = getResolvedCompilationUnitToResendNotification(file);
+          CompilationUnit dartUnit =
+              getResolvedCompilationUnitToResendNotification(file);
           if (dartUnit != null) {
             switch (service) {
               case AnalysisService.HIGHLIGHTS:
@@ -598,7 +651,11 @@ class AnalysisServer {
                 sendAnalysisNotificationOccurrences(this, file, dartUnit);
                 break;
               case AnalysisService.OUTLINE:
-                sendAnalysisNotificationOutline(this, context, source, dartUnit);
+                sendAnalysisNotificationOutline(
+                    this,
+                    context,
+                    source,
+                    dartUnit);
                 break;
               case AnalysisService.OVERRIDES:
                 sendAnalysisNotificationOverrides(this, file, dartUnit);
@@ -730,7 +787,8 @@ class AnalysisServer {
     Source unitSource = getSource(path);
     List<Source> librarySources = context.getLibrariesContaining(unitSource);
     for (Source librarySource in librarySources) {
-      CompilationUnit unit = context.getResolvedCompilationUnit2(unitSource, librarySource);
+      CompilationUnit unit =
+          context.getResolvedCompilationUnit2(unitSource, librarySource);
       if (unit != null) {
         units.add(unit);
       }
@@ -823,7 +881,7 @@ class AnalysisServer {
    * done.
    */
   void sendContextAnalysisDoneNotifications(AnalysisContext context,
-                                            AnalysisDoneReason reason) {
+      AnalysisDoneReason reason) {
     Completer<AnalysisDoneReason> completer =
         contextAnalysisDoneCompleters.remove(context);
     if (completer != null) {
@@ -869,15 +927,6 @@ class AnalysisServer {
   }
 
   /**
-   * Notify all listeners that analysis is complete.
-   */
-  void _notifyAnalysisComplete() {
-    listeners.forEach((AnalysisServerListener listener) {
-      listener.analysisComplete();
-    });
-  }
-
-  /**
    * Schedules [performOperation] exection.
    */
   void _schedulePerformOperation() {
@@ -903,19 +952,12 @@ class AnalysisServer {
       stackTraceString = 'null stackTrace';
     }
     // send the notification
-    channel.sendNotification(new ServerErrorParams(true, exceptionString,
-        stackTraceString).toNotification());
+    channel.sendNotification(
+        new ServerErrorParams(
+            true,
+            exceptionString,
+            stackTraceString).toNotification());
   }
-}
-
-/**
- * An object that is listening for lifecycle events from an analysis server.
- */
-abstract class AnalysisServerListener {
-  /**
-   * Analysis is complete.
-   */
-  void analysisComplete();
 }
 
 typedef void OptionUpdater(AnalysisOptionsImpl options);
