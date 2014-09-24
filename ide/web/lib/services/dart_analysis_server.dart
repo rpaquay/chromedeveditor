@@ -6,11 +6,11 @@ library spark.dart_analysis_server;
 
 import 'dart:async';
 
-//import 'package:analyzer_clone/file_system/file_system.dart';
-//import 'package:analysis_server/src/analysis_server.dart';
-//import 'package:analysis_server/src/channel/channel.dart';
-//import 'package:analysis_server/src/package_map_provider.dart';
-//import 'package:analysis_server/src/services/index/index.dart';
+import 'package:analyzer_clone/file_system/file_system.dart';
+import 'package:analysis_server/src/analysis_server.dart';
+import 'package:analysis_server/src/channel/channel.dart';
+import 'package:analyzer_clone/source/package_map_provider.dart';
+import 'package:analysis_server/src/services/index/index.dart';
 
 import '../dart/sdk.dart' as sdk;
 import 'chrome_dart_sdk.dart';
@@ -27,16 +27,16 @@ class AnalysisServerDartServices implements DartServices {
 
   AnalysisServerDartServices(sdk.DartSdk sdk, this._contentsProvider)
     : dartSdk = createSdk(sdk) {
-//    ServerCommunicationChannel channel = null;
-//    ResourceProvider resourceProvider = null;
-//    PackageMapProvider packageMapProvider = null;
-//    Index index = null;
-//    AnalysisServer server = new AnalysisServer(
-//        channel,
-//        null, //resourceProvider,
-//        packageMapProvider,
-//        index,
-//        dartSdk);
+    ServerCommunicationChannel channel = null;
+    ResourceProvider resourceProvider = null;
+    PackageMapProvider packageMapProvider = null;
+    Index index = null;
+    AnalysisServer server = new AnalysisServer(
+        channel,
+        resourceProvider,
+        packageMapProvider,
+        index,
+        dartSdk);
   }
 
   //Future<ChromeDartSdk> get dartSdkFuture => new Future.value(dartSdk);
