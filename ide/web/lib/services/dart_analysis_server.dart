@@ -17,7 +17,9 @@ import 'package:path/src/context.dart';
 
 import '../dart/sdk.dart' as sdk;
 import 'chrome_dart_sdk.dart';
+import 'dart_analyzer.dart' as dart_analyzer;
 import 'dart_services.dart';
+import 'outline_builder.dart';
 import 'services_common.dart' as common;
 
 /**
@@ -26,7 +28,8 @@ import 'services_common.dart' as common;
 class AnalysisServerDartServices implements DartServices {
   final ChromeDartSdk dartSdk;
   final common.ContentsProvider _contentsProvider;
-  //final Map<String, ProjectContext> _contexts = {};
+  final Map<String, AnalysisServerProjectContext> _contexts = {};
+  AnalysisServer analysisServer;
 
   AnalysisServerDartServices(sdk.DartSdk sdk, this._contentsProvider)
     : dartSdk = createSdk(sdk) {
@@ -37,7 +40,7 @@ class AnalysisServerDartServices implements DartServices {
     ServerCommunicationChannel channel = new LocalServerCommunicationChannel();
     ResourceProvider resourceProvider = new LocalResourceProvider();
     PackageMapProvider packageMapProvider = new LocalPackageMapProvider();
-    AnalysisServer server = new AnalysisServer(
+    analysisServer = new AnalysisServer(
         channel,
         resourceProvider,
         packageMapProvider,
@@ -49,13 +52,17 @@ class AnalysisServerDartServices implements DartServices {
 
   @override
   Future<common.Outline> getOutlineFor(String codeString) {
-    // TODO(rpaquay)
-    return new Future.value(null);
+    return dart_analyzer
+        .analyzeString(dartSdk, codeString)
+        .then((dart_analyzer.AnalyzerResult result) {
+          return new OutlineBuilder().build(result.ast);
+        });
   }
 
   @override
   Future createContext(String id) {
-    // TODO(rpaquay)
+    // TODO(rpaquay): Notify analysis server
+    _contexts[id] = new AnalysisServerProjectContext(id, dartSdk, _contentsProvider);
     return new Future.value(null);
   }
 
@@ -66,12 +73,23 @@ class AnalysisServerDartServices implements DartServices {
       List<String> changedUuids,
       List<String> deletedUuids) {
     // TODO(rpaquay)
-    return new Future.value(null);
+    AnalysisServerProjectContext context = _contexts[id];
+    if (context == null) {
+      return new Future.error('no context associated with id ${id}');
+    }
+
+    return context.processChanges(addedUuids, changedUuids, deletedUuids);
   }
 
   @override
   Future disposeContext(String id) {
-    // TODO(rpaquay)
+    // TODO(rpaquay): Notify analysis server
+    AnalysisServerProjectContext context = _contexts[id];
+    if (context == null) {
+      return new Future.error('no context associated with id ${id}');
+    }
+    context.dispose();
+    _contexts.remove(id);
     return new Future.value(null);
   }
 
@@ -79,6 +97,40 @@ class AnalysisServerDartServices implements DartServices {
   Future<common.Declaration> getDeclarationFor(String contextId, String fileUuid, int offset) {
     // TODO(rpaquay)
     return new Future.value(null);
+  }
+}
+
+class AnalysisServerProjectContext {
+  // The id for the project this context is associated with.
+  final String id;
+  final AnalysisServer analysisServer;
+  final ChromeDartSdk sdk;
+  final common.ContentsProvider provider;
+  /// 'true' if the corresponding context has been added to the analysisServer
+  bool contextCreated;
+
+  AnalysisServerProjectContext(this.id, this.analysisServer, this.sdk, this.provider) {
+//    AnalysisEngine.instance.logger = new _AnalysisEngineDebugLogger();
+//    context = AnalysisEngine.instance.createAnalysisContext();
+//    context.sourceFactory = new SourceFactory([
+//        new DartSdkUriResolver(sdk),
+//        new PackageUriResolver(this),
+//        new FileUriResolver(this)
+//    ]);
+  }
+
+  Future<AnalysisResultUuid> processChanges(
+      String id,
+      List<String> addedUuids,
+      List<String> changedUuids,
+      List<String> deletedUuids) {
+    analysisServer.contextDirectoryManager.addContext(folder, packageMap);
+    analysisServer.getAnalysisContext(path);
+    return new Future.value(null);
+  }
+
+  void dispose() {
+    // TODO(rpaquay): Notify analysis server
   }
 }
 
