@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart_analyzer.dart' as dart_analyzer;
 import 'dart_analysis_server.dart' as dart_analysis_server;
 import 'dart_services.dart';
+import 'dart_source.dart';
 import 'services_common.dart';
 import 'dart_compiler.dart';
 import '../dart/sdk.dart';

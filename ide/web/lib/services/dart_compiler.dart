@@ -13,7 +13,7 @@ import 'dart:html' as html;
 import 'package:compiler_unsupported/compiler.dart' as compiler;
 export 'package:compiler_unsupported/compiler.dart' show Diagnostic;
 
-import 'services_common.dart' as common;
+import 'dart_source.dart';
 import '../dart/sdk.dart';
 
 /**
@@ -24,10 +24,10 @@ import '../dart/sdk.dart';
  */
 class Compiler {
   final DartSdk _sdk;
-  final common.ContentsProvider _contentsProvider;
+  final ContentsProvider _contentsProvider;
 
   static Compiler createCompilerFrom(DartSdk sdk,
-                                     common.ContentsProvider contentsProvider) {
+                                     ContentsProvider contentsProvider) {
     return new Compiler._(sdk, contentsProvider);
   }
 
@@ -204,7 +204,7 @@ class _CompilerProvider {
   final String textInput;
   final String uuidInput;
   final DartSdk sdk;
-  final common.ContentsProvider provider;
+  final ContentsProvider provider;
 
   _CompilerProvider.fromString(this.sdk, this.textInput)
       : uuidInput = null,

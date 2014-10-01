@@ -34,7 +34,7 @@ import '../dart/sdk.dart' as sdk;
  */
 class AnalyzerDartServices implements DartServices {
   final ChromeDartSdk dartSdk;
-  final common.ContentsProvider _contentsProvider;
+  final ContentsProvider _contentsProvider;
   final Map<String, ProjectContext> _contexts = {};
 
   AnalyzerDartServices(sdk.DartSdk sdk, this._contentsProvider)
@@ -275,7 +275,7 @@ class ProjectContext {
   // The id for the project this context is associated with.
   final String id;
   final ChromeDartSdk sdk;
-  final common.ContentsProvider provider;
+  final ContentsProvider provider;
 
   AnalysisContext context;
 
@@ -293,35 +293,8 @@ class ProjectContext {
 
   Future<AnalysisResultUuid> processChanges(List<String> addedUuids,
       List<String> changedUuids, List<String> deletedUuids) {
-
     ChangeSet changeSet = new ChangeSet();
-
-    // added
-    for (String uuid in addedUuids) {
-      _sources[uuid] = new WorkspaceSource(this, uuid);
-      changeSet.addedSource(_sources[uuid]);
-    }
-
-    // changed
-    for (String uuid in changedUuids) {
-      if (_sources[uuid] != null) {
-        changeSet.changedSource(_sources[uuid]);
-        _sources[uuid].setContents(null);
-      } else {
-        _sources[uuid] = new WorkspaceSource(this, uuid);
-        changeSet.addedSource(_sources[uuid]);
-      }
-    }
-
-    // deleted
-    for (String uuid in deletedUuids) {
-      if (_sources[uuid] != null) {
-        // TODO(devoncarew): Should we set this to deleted or remove the FileSource?
-        _sources[uuid]._exists = false;
-        _sources[uuid].setContents(null);
-        changeSet.removedSource(_sources.remove(uuid));
-      }
-    }
+    DartAnalyzerHelpers.processChanges(addedUuids, changedUuids, deletedUuids, changeSet, _sources);
 
     // Increase the cache size before we process the changes. We set the size
     // back down to the default after analysis is complete.
@@ -331,7 +304,7 @@ class ProjectContext {
 
     Completer<AnalysisResultUuid> completer = new Completer();
 
-    _populateSources().then((_) {
+    DartAnalyzerHelpers.populateSources(id, _sources, provider).then((_) {
       _processChanges(completer, new AnalysisResultUuid());
     }).catchError((e) {
       _setCacheSize(DEFAULT_CACHE_SIZE);
@@ -372,33 +345,6 @@ class ProjectContext {
     }
   }
 
-  /**
-   * Populate the contents for the [WorkspaceSource]s.
-   */
-  Future _populateSources() {
-    List<Future> futures = [];
-
-    _sources.forEach((String uuid, WorkspaceSource source) {
-      if (source.exists() && source._strContents == null) {
-        Future f;
-
-        if (uuid.startsWith('package:')) {
-          f = provider.getPackageContents(id, uuid).then((String str) {
-            source.setContents(str);
-          });
-        } else {
-          f = provider.getFileContents(uuid).then((String str) {
-            source.setContents(str);
-          });
-        }
-
-        futures.add(f);
-      }
-    });
-
-    return Future.wait(futures);
-  }
-
   void _setCacheSize(int size) {
     var options = new AnalysisOptionsImpl();
     options.cacheSize = size;
@@ -432,139 +378,6 @@ int _errorSeverityToInt(ErrorSeverity severity) {
   } else {
     return common.ErrorSeverity.NONE;
   }
-}
-
-/**
- * A [Source] abstract base class based on workspace uuids.
- */
-abstract class WorkspaceSource extends Source {
-  static final FILE_SCHEME = "file";
-  static final PACKAGE_SCHEME = "package";
-  ProjectContext context;
-  String uuid;
-
-  int modificationStamp;
-  bool _exists = true;
-  String _strContents;
-
-  /**
-   * Creates an concrete instance of [WorkspaceSource] according to the format
-   * of [uuid].
-   * For source files in packages, [uuid] follows a
-   * "package:package_name/source_path" format.
-   * For source files part of the application, [uuid] follows
-   * a "chrome-app-id:app-name/source_path" format.
-   */
-  factory WorkspaceSource(ProjectContext context, String uuid) {
-    assert(uuid != null);
-    if (uuid.startsWith(PACKAGE_SCHEME + ":")) {
-      return new PackageSource(context, uuid);
-    } else {
-      return new FileSource(context, uuid);
-    }
-  }
-
-  WorkspaceSource._(this.context, this.uuid) {
-    touchFile();
-  }
-
-  @override
-  bool operator==(Object object) {
-    return object is WorkspaceSource ? object.uuid == uuid : false;
-  }
-
-  @override
-  bool exists() => _exists;
-
-  @override
-  TimestampedData<String> get contents =>
-    new TimestampedData(modificationStamp, _strContents);
-
-  void getContentsToReceiver(Source_ContentReceiver receiver) {
-    TimestampedData cnts = contents;
-    receiver.accept(cnts.data, cnts.modificationTime);
-  }
-
-  @override
-  String get encoding => 'UTF-8';
-
-  @override
-  String get shortName => utils.basename(uuid);
-
-  @override
-  Uri get uri => new Uri(scheme: getScheme(), path: fullName);
-
-  @override
-  int get hashCode => uuid.hashCode;
-
-  @override
-  bool get isInSystemLibrary => false;
-
-  @override
-  Uri resolveRelativeUri(Uri relativeUri) =>
-    resolveRelativeUriHelper(uri, relativeUri);
-
-  void setContents(String newContents) {
-    _strContents = newContents;
-    touchFile();
-  }
-
-  void touchFile() {
-    modificationStamp = new DateTime.now().millisecondsSinceEpoch;
-  }
-
-  @override
-  String toString() => uuid;
-
-  String getScheme();
-
-  @override
-  String get fullName;
-
-  @override
-  UriKind get uriKind;
-}
-
-/**
- * A source file from a package.
- */
-class PackageSource extends WorkspaceSource {
-  PackageSource(ProjectContext context, String uuid): super._(context, uuid) {
-    _DebugLogger.instance.debug("PackageSource(${uuid})");
-  }
-
-  @override
-  String getScheme() => WorkspaceSource.PACKAGE_SCHEME;
-
-  @override
-  String get fullName {
-    int index = uuid.indexOf(":");
-    return index == -1 ? uuid : uuid.substring(index + 1);
-  }
-
-  @override
-  UriKind get uriKind => UriKind.PACKAGE_URI;
-}
-
-/**
- * A regular source file from the application.
- */
-class FileSource extends WorkspaceSource {
-  FileSource(ProjectContext context, String uuid): super._(context, uuid) {
-    _DebugLogger.instance.debug("FileSource(${uuid})");
-  }
-
-  @override
-  String getScheme() => WorkspaceSource.FILE_SCHEME;
-
-  @override
-  String get fullName {
-    int index = uuid.indexOf('/');
-    return index == -1 ? uuid : uuid.substring(index + 1);
-  }
-
-  @override
-  UriKind get uriKind => UriKind.FILE_URI;
 }
 
 /**

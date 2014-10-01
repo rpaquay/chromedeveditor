@@ -246,8 +246,10 @@ class AnalyzerService extends Service {
 
     return _sendAction('createContext', {'contextId': project.uuid}).then((_) {
       // Add existing files to the context.
-      List<File> files = project.traverse(includeDerived: false).where(
-          (r) => r.isFile && r.name.endsWith('.dart')).toList();
+      List<File> files = project
+          .traverse(includeDerived: false)
+          .where((Resource r) => _includeSourceFile(r))
+          .toList();
       files.removeWhere(
           (file) => getPackageManager().properties.isSecondaryPackage(file));
 
@@ -256,6 +258,11 @@ class AnalyzerService extends Service {
         return context;
       });
     });
+  }
+
+  bool _includeSourceFile(Resource r) {
+    return r.isFile &&
+        (r.name.endsWith('.dart') || r.name.endsWith('pubspec.yaml'));
   }
 
   Future disposeProjectAnalyzer(Project project) {

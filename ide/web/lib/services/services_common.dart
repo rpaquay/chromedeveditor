@@ -284,11 +284,6 @@ class CompileError {
       '[${kind}] ${message} (${file == null ? '' : file.path}:${line})';
 }
 
-abstract class ContentsProvider {
-  Future<String> getFileContents(String uuid);
-  Future<String> getPackageContents(String relativeUuid, String packageRef);
-}
-
 class ErrorSeverity {
   static int NONE = 0;
   static int ERROR = 1;

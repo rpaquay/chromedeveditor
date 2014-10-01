@@ -9,7 +9,7 @@ import 'dart:async';
 import 'package:unittest/unittest.dart';
 
 import '../dart_compiler.dart';
-import '../services_common.dart';
+import '../dart_source.dart';
 
 defineTests() {
   group('compiler', () {
