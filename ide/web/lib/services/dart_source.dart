@@ -366,7 +366,7 @@ class FileUuidHelpers {
   }
 
   /// Returns the package name of a package source file uuid.
-  static String getPackageName(String uuid) {
+  static String getPackageFilePackageName(String uuid) {
     assert(isPackageFile(uuid));
 
     int colon = uuid.indexOf(":");
@@ -380,7 +380,7 @@ class FileUuidHelpers {
   }
 
   /// Returns the file name of a package source file uuid.
-  static String getPackageFilePath(String uuid) {
+  static String getPackageFileRelativePath(String uuid) {
     assert(isPackageFile(uuid));
 
     int separator = uuid.indexOf("/");

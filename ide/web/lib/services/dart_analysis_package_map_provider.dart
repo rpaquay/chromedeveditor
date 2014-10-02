@@ -9,8 +9,6 @@ import 'package:analyzer_clone/source/package_map_provider.dart';
 
 import 'dart_analysis_file_system.dart';
 import 'dart_analysis_logger.dart';
-import 'dart_source.dart';
-import 'services_utils.dart' as utils;
 
 /**
  * A PackageMapProvider is an entity capable of determining the mapping from
@@ -29,43 +27,9 @@ class LocalPackageMapProvider implements PackageMapProvider {
     AnalysisLogger.instance.debug("LocalPackageMapProvider.computePackageMap(\"${folder.path}\")");
     // TODO(rpaquay): Compute dependencies!
     if (folder is ProjectRootFolder) {
-      var map = _createPackageMap(folder, folder.packageSourceFiles);
+      var map = folder.getPackageRootFolder().createPackageMap();
       return new PackageMapInfo(map, new Set<String>());
     }
     return new PackageMapInfo({}, new Set<String>());
   }
-
-  Map<String, List<Folder>> _createPackageMap(
-      ProjectRootFolder rootFolder,
-      Iterable<WorkspaceSource> packageSourceFiles) {
-    // Package name => list of source files in the package.
-    Map<String, List<WorkspaceSource>> packages = {};
-
-    packageSourceFiles.forEach((WorkspaceSource source) {
-      String packageName = FileUuidHelpers.getPackageName(source.uuid);
-      List<WorkspaceSource> sources = packages[packageName];
-      if (sources == null) {
-        sources = [];
-        packages[packageName] = sources;
-      }
-      sources.add(source);
-    });
-
-    Map<String, List<Folder>> result = {};
-    packages.keys.forEach((String packageName) {
-      // Collect set of folder names from source files names
-      Set<String> folderNames = new Set<String>();
-      packages[packageName].forEach((WorkspaceSource source) {
-        String folderName = utils.dirname(FileUuidHelpers.getPackageFilePath(source.uuid));
-        folderNames.add(folderName);
-      });
-
-      // Create the list of package folders
-      List<Folder> folders = folderNames.map((String folderName) => rootFolder.getChild(folderName)).toList();
-      result[packageName] = folders;
-    });
-    return result;
-  }
-
-
 }
