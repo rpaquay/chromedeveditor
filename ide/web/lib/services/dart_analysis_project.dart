@@ -8,80 +8,109 @@ import 'dart:async';
 
 import 'package:analyzer_clone/src/generated/engine.dart';
 import 'package:analysis_server/src/analysis_server.dart';
+import 'package:analysis_server/src/channel/channel.dart';
 import 'package:analysis_server/src/protocol.dart';
 
 import 'chrome_dart_sdk.dart';
-import 'dart_analysis_channel.dart';
 import 'dart_analysis_file_system.dart';
 import 'dart_services.dart';
 import 'dart_source.dart';
+import 'services_common.dart' as common;
 
 /**
  * The context associated to a project.
  */
-class AnalysisServerProjectContext {
+class ProjectContext {
   // The id for the project this context is associated with.
   final ProjectState _projectState;
   final AnalysisServer _analysisServer;
   final ChromeDartSdk _sdk;
   final ContentsProvider _contentsProvider;
   final LocalResourceProvider _resourceProvider;
-  final LocalServerCommunicationChannel _serverChannel;
-  /// 'true' if the corresponding context has been added to the analysisServer
-  bool contextCreated = false;
-  ProjectRootFolder projectFolder;
+  final ClientCommunicationChannel _clientChannel;
+  /// The root folder is lazily created on the first [processchanges]
+  ProjectRootFolder _projectFolder;
+  bool _contextCreated = false;
+  int _requestId = 0;
 
-  AnalysisServerProjectContext(
-      this._projectState,
+  ProjectContext(
+      String projectId,
       this._analysisServer,
       this._sdk,
       this._contentsProvider,
       this._resourceProvider,
-      this._serverChannel);
+      this._clientChannel)
+      : this._projectState = new ProjectState(projectId);
 
   Future<AnalysisResultUuid> processChanges(
       List<String> addedUuids,
       List<String> changedUuids,
       List<String> deletedUuids) {
     // Create the analysis context only for the very first change notification.
-    if (!contextCreated) {
-      // TODO(rpaquay): Enqueue the request if there are pending ones.
+    if (!_contextCreated) {
+      _projectFolder = _resourceProvider.addFolder(_projectState);
+      _contextCreated = true;
+
       ChangeSet changeSet = new ChangeSet();
       DartAnalyzerHelpers.processChanges(addedUuids, changedUuids, deletedUuids, changeSet, _projectState.sources);
 
-      DartAnalyzerHelpers.populateSources(_projectState._id, _projectState.sources, _contentsProvider).then((_) {
-        ProjectRootFolder projectFolder = _createProjectFolder(addedUuids);
+      Map<String, String> fileUuidFromRequestId = {};
+      return DartAnalyzerHelpers
+          .populateSources(_projectState._id, _projectState.sources, _contentsProvider)
+          .then((_) {
+            // We have source files, tell analysis server about them
+            Request request = new AnalysisSetAnalysisRootsParams([_projectFolder.path],
+                []).toRequest(_createRequestId());
+            return _clientChannel.sendRequest(request);
+          }).then((_) {
+            // Initial analysis is done, ask server for errors for all files
+            var futures = _projectState.projectFiles
+              .where((source) => FileUuidHelpers.isDartSource(source.uuid))
+              .map((source) {
+                String sourcePath = FileUuidHelpers.buildAppFileFullPath(_projectState.projectId, source.fullName);
+                Request request = new AnalysisGetErrorsParams(sourcePath)
+                  .toRequest(_createRequestId());
+                fileUuidFromRequestId[request.id] = source.uuid;
+                return _clientChannel.sendRequest(request);
+              });
 
-        Request request = new AnalysisSetAnalysisRootsParams([projectFolder.path],
-            []).toRequest('0');
-        handleSuccessfulRequest(request);
-
-        //analysisServer.contextDirectoryManager.addContext(projectFolder, packageMap);
-        contextCreated = true;
-      });
-      // TODO(rpaquay)
-      return new Completer().future;
+            return Future.wait(futures);
+          }).then((List<Response> responses) {
+            AnalysisResultUuid analysisResult = new AnalysisResultUuid();
+            responses.forEach((Response response) {
+              AnalysisGetErrorsResult responseResult = new AnalysisGetErrorsResult.fromResponse(response);
+              String uuid = fileUuidFromRequestId[response.id];
+              assert(uuid != null);
+              var errors = responseResult.errors.map((AnalysisError analysisError) {
+                common.AnalysisError error = new common.AnalysisError();
+                error.offset = analysisError.location.offset;
+                error.message = analysisError.message;
+                error.lineNumber = analysisError.location.startLine;
+                error.length = analysisError.location.length;
+                error.errorSeverity =
+                    analysisError.severity == AnalysisErrorSeverity.INFO ? common.ErrorSeverity.INFO :
+                    analysisError.severity == AnalysisErrorSeverity.WARNING ? common.ErrorSeverity.WARNING :
+                    analysisError.severity == AnalysisErrorSeverity.ERROR ? common.ErrorSeverity.ERROR :
+                    common.ErrorSeverity.NONE;
+                return error;
+              });
+              analysisResult.addErrors(uuid,  errors.toList());
+            });
+            return new Future.value(analysisResult);
+          });
     } else {
       return new Future.value(null);
     }
   }
 
-  void handleSuccessfulRequest(Request request) {
-    this._serverChannel.clientSendRequest(request);
-  }
-
-  ProjectRootFolder _createProjectFolder(List<String> uuids) {
-    List<String> appFiles = uuids.where((String uuid) => FileUuidHelpers.isAppFile(uuid)).toList();
-    assert(appFiles.length >= 0);
-    String rootFolder = appFiles.map((String uuid) => FileUuidHelpers.getAppFileProjectPath(uuid)).toSet().single;
-
-    // Create folder
-    return _resourceProvider.addFolder(_projectState);
+  String _createRequestId() {
+    _requestId++;
+    return _requestId.toString();
   }
 
   void dispose() {
     // TODO(rpaquay): Clear all pending requests, then notity analysis server
-    _resourceProvider.removeProject(projectFolder);
+    _resourceProvider.removeProject(_projectFolder);
   }
 }
 

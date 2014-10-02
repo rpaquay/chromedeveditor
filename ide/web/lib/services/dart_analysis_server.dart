@@ -37,7 +37,7 @@ class AnalysisServerDartServices implements DartServices {
   final ContentsProvider _contentsProvider;
   final LocalResourceProvider _resourceProvider;
   final LocalServerCommunicationChannel _serverChannel;
-  final Map<String, AnalysisServerProjectContext> _contexts = {};
+  final Map<String, ProjectContext> _contexts = {};
   AnalysisServer analysisServer;
 
   AnalysisServerDartServices(sdk.DartSdk sdk, this._contentsProvider)
@@ -88,13 +88,13 @@ class AnalysisServerDartServices implements DartServices {
   Future createContext(String id) {
     // TODO(rpaquay): Notify analysis server
     ProjectState state = new ProjectState(id);
-    _contexts[id] = new AnalysisServerProjectContext(
-        state,
+    _contexts[id] = new ProjectContext(
+        id,
         analysisServer,
         dartSdk,
         _contentsProvider,
         _resourceProvider,
-        _serverChannel);
+        _serverChannel.clientChannel);
     return new Future.value(null);
   }
 
@@ -105,7 +105,7 @@ class AnalysisServerDartServices implements DartServices {
       List<String> changedUuids,
       List<String> deletedUuids) {
     // TODO(rpaquay)
-    AnalysisServerProjectContext context = _contexts[id];
+    ProjectContext context = _contexts[id];
     if (context == null) {
       return new Future.error('no context associated with id ${id}');
     }
@@ -116,7 +116,7 @@ class AnalysisServerDartServices implements DartServices {
   @override
   Future disposeContext(String id) {
     // TODO(rpaquay): Notify analysis server
-    AnalysisServerProjectContext context = _contexts[id];
+    ProjectContext context = _contexts[id];
     if (context == null) {
       return new Future.error('no context associated with id ${id}');
     }

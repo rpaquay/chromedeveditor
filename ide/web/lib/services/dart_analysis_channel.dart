@@ -4,6 +4,8 @@
 
 library spark.dart_analysis_channel;
 
+import 'dart:async';
+
 import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/channel/channel.dart';
 import 'package:analysis_server/src/protocol.dart';
@@ -19,13 +21,48 @@ typedef void OnRequest(Request request);
 typedef void OnDone();
 
 class LocalServerCommunicationChannel implements ServerCommunicationChannel {
+  // Client state
+  ClientCommunicationChannel clientChannel;
+  StreamController<Notification> _clientNotificationStreamController;
+  StreamController<Response> _clientResponseStreamContoller;
+  Map<String, RequestEntry> _activeClientRequests = {};
+
+  // Server state
   OnRequest _onRequest;
   Function _onError;
   OnDone _onDone;
 
-  void clientSendRequest(Request request) {
+  LocalServerCommunicationChannel()  {
+    _clientNotificationStreamController = new StreamController<Notification>.broadcast();
+    _clientResponseStreamContoller = new StreamController<Response>.broadcast();
+    clientChannel = new LocalClientCommunicationChannel(this);
+  }
+
+  Stream<Notification> get _clientNotificationStream =>
+      _clientNotificationStreamController.stream;
+
+  Stream<Response> get _clientResponseStream =>
+      _clientResponseStreamContoller.stream;
+
+  Future<Response> _clientSendRequest(Request request) {
     assert(_onRequest != null);
+
+    // Create and enqueue entry for the request
+    assert(_activeClientRequests[request.id] == null);
+    RequestEntry entry = new RequestEntry(request, new Completer<Response>());
+    _activeClientRequests[request.id] = entry;
+
+    // Pass request to the analysis server.
     _onRequest(request);
+
+    return entry.completer.future;
+  }
+
+  Future _clientClose() {
+    if (_onDone != null) {
+      _onDone();
+    }
+    return new Future.value(null);
   }
 
   /**
@@ -37,7 +74,6 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
    */
   @override
   void listen(void onRequest(Request request), {Function onError, void onDone()}) {
-    // TODO(rpaquay)
     AnalysisLogger.instance.debug("LocalServerCommunicationChannel.listen");
     _onRequest = onRequest;
     _onError = onError;
@@ -49,8 +85,8 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
    */
   @override
   void sendNotification(Notification notification) {
-    // TODO(rpaquay)
     AnalysisLogger.instance.debug("LocalServerCommunicationChannel.sendNotification(${notification.event})");
+    _clientNotificationStreamController.add(notification);
   }
 
   /**
@@ -58,8 +94,17 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
    */
   @override
   void sendResponse(Response response) {
-    // TODO(rpaquay)
     AnalysisLogger.instance.debug("LocalServerCommunicationChannel.sendResponse(${response.id})");
+
+    // Complete and remove request corresponding the the response
+    assert(_activeClientRequests[response.id] != null);
+    RequestEntry entry = _activeClientRequests.remove(response.id);
+    assert(entry != null);
+    assert(entry.request.id == response.id);
+    entry.completer.complete(response);
+
+    // Push the response to the stream
+    _clientResponseStreamContoller.add(response);
   }
 
   /**
@@ -67,7 +112,60 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
    */
   @override
   void close() {
-    // TODO(rpaquay)
     AnalysisLogger.instance.debug("LocalServerCommunicationChannel.close");
+    _activeClientRequests.clear();
+    _clientNotificationStreamController.close();
+    _clientResponseStreamContoller.close();
+  }
+}
+
+class RequestEntry {
+  final Request request;
+  final Completer completer;
+  RequestEntry(this.request, this.completer);
+}
+
+/**
+ * The abstract class [ClientCommunicationChannel] defines the behavior of
+ * objects that allow a client to send [Request]s to an [AnalysisServer] and to
+ * receive both [Response]s and [Notification]s.
+ */
+class LocalClientCommunicationChannel implements ClientCommunicationChannel {
+  final LocalServerCommunicationChannel _localChannel;
+
+  LocalClientCommunicationChannel(LocalServerCommunicationChannel localChannel)
+    : this._localChannel = localChannel,
+      this.notificationStream = localChannel._clientNotificationStream,
+      this.responseStream = localChannel._clientResponseStream;
+
+  /**
+   * The stream of notifications from the server.
+   */
+  @override
+  Stream<Notification> notificationStream;
+
+  /**
+   * The stream of responses from the server.
+   */
+  @override
+  Stream<Response> responseStream;
+
+  /**
+   * Send the given [request] to the server
+   * and return a future with the associated [Response].
+   */
+  @override
+  Future<Response> sendRequest(Request request) {
+    AnalysisLogger.instance.debug("LocalClientCommunicationChannel.sendRequest(${request.id})");
+    return _localChannel._clientSendRequest(request);
+  }
+
+  /**
+   * Close the channel to the server. Once called, all future communication
+   * with the server via [sendRequest] will silently be ignored.
+   */
+  @override
+  Future close() {
+    return _localChannel._clientClose();
   }
 }

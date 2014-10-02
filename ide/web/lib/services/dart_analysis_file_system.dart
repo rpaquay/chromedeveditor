@@ -95,8 +95,10 @@ class LocalResourceProvider implements ResourceProvider {
   }
 
   ResourcePath splitPath(String path) {
+    int separatorIndex = path.indexOf("/");
+    String folderPath = (separatorIndex < 0 ? path : path.substring(0, separatorIndex));
     String projectRootPath = _projectFolders.keys
-      .firstWhere((String folderPath) => path == folderPath, orElse: () => null);
+      .firstWhere((String x) => x == folderPath, orElse: () => null);
     if (projectRootPath == null) {
       return null;
     }

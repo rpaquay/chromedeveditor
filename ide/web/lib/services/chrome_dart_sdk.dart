@@ -46,7 +46,13 @@ class ChromeDartSdk extends DartSdk {
    * or `null` if the file is not in this SDK.
    */
   @override
-  Source fromFileUri(Uri uri) => mapDartUri(uri.toString());
+  Source fromFileUri(Uri uri) {
+    if (uri.scheme != DartUriResolver.DART_SCHEME) {
+      return null;
+    }
+
+    return mapDartUri(uri.toString());
+  }
 
   /**
    * Return the library representing the library with the given `dart:` URI, or `null`
