@@ -21,23 +21,23 @@ import 'dart_source.dart';
  */
 class AnalysisServerProjectContext {
   // The id for the project this context is associated with.
-  final ProjectState _state;
-  final AnalysisServer analysisServer;
-  final ChromeDartSdk sdk;
-  final ContentsProvider contentsProvider;
-  final LocalResourceProvider resourceProvider;
-  final LocalServerCommunicationChannel serverChannel;
+  final ProjectState _projectState;
+  final AnalysisServer _analysisServer;
+  final ChromeDartSdk _sdk;
+  final ContentsProvider _contentsProvider;
+  final LocalResourceProvider _resourceProvider;
+  final LocalServerCommunicationChannel _serverChannel;
   /// 'true' if the corresponding context has been added to the analysisServer
   bool contextCreated = false;
   ProjectRootFolder projectFolder;
 
   AnalysisServerProjectContext(
-      this._state,
-      this.analysisServer,
-      this.sdk,
-      this.contentsProvider,
-      this.resourceProvider,
-      this.serverChannel);
+      this._projectState,
+      this._analysisServer,
+      this._sdk,
+      this._contentsProvider,
+      this._resourceProvider,
+      this._serverChannel);
 
   Future<AnalysisResultUuid> processChanges(
       List<String> addedUuids,
@@ -47,9 +47,9 @@ class AnalysisServerProjectContext {
     if (!contextCreated) {
       // TODO(rpaquay): Enqueue the request if there are pending ones.
       ChangeSet changeSet = new ChangeSet();
-      DartAnalyzerHelpers.processChanges(addedUuids, changedUuids, deletedUuids, changeSet, _state.sources);
+      DartAnalyzerHelpers.processChanges(addedUuids, changedUuids, deletedUuids, changeSet, _projectState.sources);
 
-      DartAnalyzerHelpers.populateSources(_state._id, _state.sources, contentsProvider).then((_) {
+      DartAnalyzerHelpers.populateSources(_projectState._id, _projectState.sources, _contentsProvider).then((_) {
         ProjectRootFolder projectFolder = _createProjectFolder(addedUuids);
 
         Request request = new AnalysisSetAnalysisRootsParams([projectFolder.path],
@@ -67,7 +67,7 @@ class AnalysisServerProjectContext {
   }
 
   void handleSuccessfulRequest(Request request) {
-    this.serverChannel.clientSendRequest(request);
+    this._serverChannel.clientSendRequest(request);
   }
 
   ProjectRootFolder _createProjectFolder(List<String> uuids) {
@@ -76,12 +76,12 @@ class AnalysisServerProjectContext {
     String rootFolder = appFiles.map((String uuid) => FileUuidHelpers.getAppFileProjectPath(uuid)).toSet().single;
 
     // Create folder
-    return resourceProvider.addFolder(_state);
+    return _resourceProvider.addFolder(_projectState);
   }
 
   void dispose() {
     // TODO(rpaquay): Clear all pending requests, then notity analysis server
-    resourceProvider.removeProject(projectFolder);
+    _resourceProvider.removeProject(projectFolder);
   }
 }
 
