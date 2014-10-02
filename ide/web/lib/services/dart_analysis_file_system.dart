@@ -2,7 +2,7 @@
 // All rights reserved. Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-library spark.dart_analysis_fie_system;
+library spark.dart_analysis_file_system;
 
 import 'dart:async';
 
