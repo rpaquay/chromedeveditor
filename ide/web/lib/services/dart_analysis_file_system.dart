@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:analyzer_clone/file_system/file_system.dart';
 import 'package:analyzer_clone/src/generated/source.dart';
 import 'package:path/src/context.dart';
+import 'package:path/src/style.dart';
 import 'package:watcher/src/watch_event.dart';
 
 import 'dart_analysis_logger.dart';
@@ -54,7 +55,7 @@ class LocalResourceProvider implements ResourceProvider {
    * Get the path context used by this resource provider.
    */
   @override
-  final Context pathContext = new Context();
+  final Context pathContext = new Context(style: Style.posix);
 
   /**
    * Adds a new project and returns a new corresponding [ProjectRootFolder] instance.
@@ -79,6 +80,11 @@ class LocalResourceProvider implements ResourceProvider {
   @override
   Resource getResource(String path) {
     AnalysisLogger.instance.debug("LocalResourceProvider.getResource(\"${path}\")");
+
+    // TODO(rpaquay): We should not need this special case.
+    if (path.length >= 1 && path[0] == '/') {
+      path = path.substring(1);
+    }
 
     ResourcePath resourcePath = splitPath(path);
     if (resourcePath == null) {

@@ -173,10 +173,8 @@ class PackageSource extends WorkspaceSource {
   String getScheme() => WorkspaceSource.PACKAGE_SCHEME;
 
   @override
-  String get fullName {
-    int index = uuid.indexOf(":");
-    return index == -1 ? uuid : uuid.substring(index + 1);
-  }
+  String get fullName =>
+      FileUuidHelpers.getPackageFileFullPath(uuid);
 
   @override
   UriKind get uriKind => UriKind.PACKAGE_URI;
@@ -192,10 +190,8 @@ class FileSource extends WorkspaceSource {
   String getScheme() => WorkspaceSource.FILE_SCHEME;
 
   @override
-  String get fullName {
-    int index = uuid.indexOf('/');
-    return index == -1 ? uuid : uuid.substring(index + 1);
-  }
+  String get fullName =>
+      FileUuidHelpers.getAppFileFullPath(uuid);
 
   @override
   UriKind get uriKind => UriKind.FILE_URI;
@@ -365,6 +361,15 @@ class FileUuidHelpers {
     return "";
   }
 
+  /// Returns the full path (project path + relative path) of an application source file uuid.
+  static String getAppFileFullPath(String uuid) {
+    assert(isAppFile(uuid));
+
+    int colon = uuid.indexOf(":");
+    assert(colon >= 0);
+    return uuid.substring(colon + 1);
+  }
+
   /// Returns the package name of a package source file uuid.
   static String getPackageFilePackageName(String uuid) {
     assert(isPackageFile(uuid));
@@ -388,6 +393,15 @@ class FileUuidHelpers {
       return uuid.substring(separator + 1);
     }
     return "";
+  }
+
+  /// Returns the full path of a package source file uuid.
+  static String getPackageFileFullPath(String uuid) {
+    assert(isPackageFile(uuid));
+
+    int colon = uuid.indexOf(":");
+    assert(colon >= 0);
+    return uuid.substring(colon + 1);
   }
 
   /// Returns the file uuid from a project id and a file relative path.

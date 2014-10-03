@@ -67,7 +67,7 @@ class ProjectContext {
             var futures = _projectState.projectFiles
               .where((source) => FileUuidHelpers.isDartSource(source.uuid))
               .map((source) {
-                String sourcePath = FileUuidHelpers.buildAppFileFullPath(_projectState.projectId, source.fullName);
+                String sourcePath = source.fullName;
                 Request request = new AnalysisGetErrorsParams(sourcePath)
                   .toRequest(_createRequestId());
                 fileUuidFromRequestId[request.id] = source.uuid;
