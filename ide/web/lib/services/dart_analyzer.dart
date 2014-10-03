@@ -272,20 +272,23 @@ class ProjectContext {
   static const int MAX_CACHE_SIZE = 256;
   static final int DEFAULT_CACHE_SIZE = AnalysisOptionsImpl.DEFAULT_CACHE_SIZE;
 
-  // The id for the project this context is associated with.
+  /**
+   * The id for the project this context is associated with, fomatted as
+   * "app-id:project-path".
+   */
   final String id;
-  final ChromeDartSdk sdk;
-  final ContentsProvider provider;
+  final ChromeDartSdk _sdk;
+  final ContentsProvider _contentsProvider;
 
   AnalysisContext context;
 
   final Map<String, WorkspaceSource> _sources = {};
 
-  ProjectContext(this.id, this.sdk, this.provider) {
+  ProjectContext(this.id, this._sdk, this._contentsProvider) {
     AnalysisEngine.instance.logger = new _AnalysisEngineDebugLogger();
     context = AnalysisEngine.instance.createAnalysisContext();
     context.sourceFactory = new SourceFactory([
-        new DartSdkUriResolver(sdk),
+        new DartSdkUriResolver(_sdk),
         new PackageUriResolver(this),
         new FileUriResolver(this)
     ]);
@@ -304,7 +307,7 @@ class ProjectContext {
 
     Completer<AnalysisResultUuid> completer = new Completer();
 
-    DartAnalyzerHelpers.populateSources(id, _sources, provider).then((_) {
+    DartAnalyzerHelpers.populateSources(id, _sources, _contentsProvider).then((_) {
       _processChanges(completer, new AnalysisResultUuid());
     }).catchError((e) {
       _setCacheSize(DEFAULT_CACHE_SIZE);
@@ -314,11 +317,16 @@ class ProjectContext {
     return completer.future;
   }
 
+  /**
+   * Returns the source file associated to [uuid], or `null` if the source file
+   * is not part of this project.
+   */
   WorkspaceSource getSource(String uuid) {
     return _sources[uuid];
   }
 
-  void _processChanges(Completer<AnalysisResultUuid> completer,
+  void _processChanges(
+      Completer<AnalysisResultUuid> completer,
       AnalysisResultUuid analysisResult) {
     try {
       AnalysisResult result = context.performAnalysisTask();
@@ -413,8 +421,17 @@ class FileUriResolver extends UriResolver {
 
   FileUriResolver(this.context);
 
+  /**
+   * Resolve the given absolute URI. Return a [Source] representing the file to which
+   * it was resolved, whether or not the resulting source exists, or `null` if it could not be
+   * resolved because the URI is invalid.
+   *
+   * @param uri the URI to be resolved
+   * @return a [Source] representing the file to which given URI was resolved
+   */
   @override
   Source resolveAbsolute(Uri uri) {
+    assert(uri.isAbsolute);
     if (!isFileUri(uri)) {
       return null;
     }
@@ -422,9 +439,23 @@ class FileUriResolver extends UriResolver {
     // TODO(rpaquay): This is somewhat brittle, as this relies on the specific
     // format of [uuid] returned by the Workspace implementation.
     // Example:
-    //   context.id = "chrome-app-id:application-name"
-    //   uri.path = "path-to-source-file-within-chrome-app"
-    String uuid = utils.pathconcat(context.id, uri.path);
+    //   context.id = "chrome-app-id:project-name"
+    //   uri.path = "/project-name/dir/file.ext"
+    //   uuid = "chrome-app-id:project-name/dir/file.ext"
+
+    // Extract project root path
+    String projectPath = FileUuidHelpers.getProjectIdProjectPath(context.id);
+    assert(projectPath.isNotEmpty);
+    projectPath = "/" + projectPath;
+    assert(uri.path.startsWith(projectPath));
+    assert(uri.path[projectPath.length] == "/");
+
+    // Extract file relative path from project root path.
+    String relativePath = uri.path.substring(projectPath.length + 1);
+    assert(relativePath.isNotEmpty);
+
+    // Build file uuid
+    String uuid = FileUuidHelpers.buildAppFileUuid(context.id, relativePath);
     return context.getSource(uuid);
   }
 }
