@@ -26,7 +26,6 @@ import 'dart_services.dart';
 import 'dart_source.dart';
 import 'outline_builder.dart';
 import 'services_common.dart' as common;
-import 'services_utils.dart' as utils;
 import '../dart/sdk.dart' as sdk;
 
 /**

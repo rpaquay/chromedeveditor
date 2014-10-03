@@ -20,23 +20,31 @@ import 'dart_analysis_logger.dart';
 typedef void OnRequest(Request request);
 typedef void OnDone();
 
+/**
+ * Implementation of [ServerCommunicationChannel] for using an [AnalysisServer]
+ * instance in the same isolate at the client. The client can communicate with
+ * the server by accessing the [clientChannel] property.
+ */
 class LocalServerCommunicationChannel implements ServerCommunicationChannel {
   // Client state
-  ClientCommunicationChannel clientChannel;
-  StreamController<Notification> _clientNotificationStreamController;
-  StreamController<Response> _clientResponseStreamContoller;
-  Map<String, RequestEntry> _activeClientRequests = {};
+  ClientCommunicationChannel _clientChannel;
+  final StreamController<Notification> _clientNotificationStreamController;
+  final StreamController<Response> _clientResponseStreamContoller;
+  final Map<String, _RequestEntry> _activeClientRequests = {};
 
   // Server state
   OnRequest _onRequest;
   Function _onError;
   OnDone _onDone;
 
-  LocalServerCommunicationChannel()  {
-    _clientNotificationStreamController = new StreamController<Notification>.broadcast();
-    _clientResponseStreamContoller = new StreamController<Response>.broadcast();
-    clientChannel = new LocalClientCommunicationChannel(this);
+  LocalServerCommunicationChannel()
+    : _clientNotificationStreamController = new StreamController<Notification>.broadcast(),
+      _clientResponseStreamContoller = new StreamController<Response>.broadcast() {
+    _clientChannel = new _LocalClientCommunicationChannel(this);
   }
+
+  ClientCommunicationChannel get clientChannel =>
+      _clientChannel;
 
   Stream<Notification> get _clientNotificationStream =>
       _clientNotificationStreamController.stream;
@@ -49,7 +57,7 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
 
     // Create and enqueue entry for the request
     assert(_activeClientRequests[request.id] == null);
-    RequestEntry entry = new RequestEntry(request, new Completer<Response>());
+    _RequestEntry entry = new _RequestEntry(request, new Completer<Response>());
     _activeClientRequests[request.id] = entry;
 
     // Pass request to the analysis server.
@@ -98,7 +106,7 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
 
     // Complete and remove request corresponding the the response
     assert(_activeClientRequests[response.id] != null);
-    RequestEntry entry = _activeClientRequests.remove(response.id);
+    _RequestEntry entry = _activeClientRequests.remove(response.id);
     assert(entry != null);
     assert(entry.request.id == response.id);
     entry.completer.complete(response);
@@ -119,21 +127,29 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
   }
 }
 
-class RequestEntry {
+/**
+ * An entry in the client request queue. Used to complete a [Future]
+ * when the response with the same ID as the request comes in from the
+ * analysis server.
+ */
+class _RequestEntry {
   final Request request;
   final Completer completer;
-  RequestEntry(this.request, this.completer);
+  _RequestEntry(this.request, this.completer);
 }
 
 /**
  * The abstract class [ClientCommunicationChannel] defines the behavior of
  * objects that allow a client to send [Request]s to an [AnalysisServer] and to
  * receive both [Response]s and [Notification]s.
+ * [_LocalClientCommunicationChannel] is the implementation of
+ * [ClientCommunicationChannel] used for communicating with a corresponding
+ * instance of [LocalServerCommunicationChannel].
  */
-class LocalClientCommunicationChannel implements ClientCommunicationChannel {
+class _LocalClientCommunicationChannel implements ClientCommunicationChannel {
   final LocalServerCommunicationChannel _localChannel;
 
-  LocalClientCommunicationChannel(LocalServerCommunicationChannel localChannel)
+  _LocalClientCommunicationChannel(LocalServerCommunicationChannel localChannel)
     : this._localChannel = localChannel,
       this.notificationStream = localChannel._clientNotificationStream,
       this.responseStream = localChannel._clientResponseStream;

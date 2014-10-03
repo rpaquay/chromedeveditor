@@ -34,7 +34,7 @@ abstract class DartServices {
   /**
    * Dispose all resources for the given context [contextId].
    */
-  Future disposeContext(String id);
+  Future disposeContext(String contextId);
 
   /**
    * Returns a [Declaration] (or `null`) corresponding to the declaration in the
