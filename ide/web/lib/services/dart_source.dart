@@ -296,33 +296,45 @@ Uri resolveRelativeUriHelper(Uri uri, Uri containedUri) {
   return result;
 }
 
+/**
+ * Set of helper functions to extract individual components from
+ * workspace file UUIDs.
+ */
 class FileUuidHelpers {
-  /// Returns `true` if [uuid] is a package file uuid.
+  /// Returns `true` if [uuid] is a package file uuid, i.e. a string
+  /// formatted as "package:package-name/dir/source.dart"
   static bool isPackageFile(String uuid) {
     return uuid.indexOf("package:") == 0;
   }
 
-  /// Returns `true` if [uuid] is a library file uuid.
+  /// Returns `true` if [uuid] is a library file uuid, i.e. a string
+  /// formatted as "dart:library-name"
   static bool isLibraryFile(String uuid) {
     return uuid.indexOf("dart:") == 0;
   }
 
-  /// Returns `true` if [uuid] is a application source file uuid.
+  /// Returns `true` if [uuid] is a application source file uuid, i.e. a string
+  /// formatted as "app-id:project-path/dir/file.dart"
   static bool isAppFile(String uuid) {
     assert(uuid.indexOf(":") >= 0);
     return !isPackageFile(uuid) && !isLibraryFile(uuid);
   }
 
+  /// Returns `true` if [uuid] is a Dart source file, i.e. the file extension
+  /// from a package or application file uuid.
   static bool isDartSource(String uuid) {
+    assert(isPackageFile(uuid) || isAppFile(uuid));
     return uuid.endsWith('.dart');
   }
 
-  /// Returns `true` if [id] is a project context id.
+  /// Returns `true` if [id] is a project context id, i.e. a string formatted
+  /// as "app-id:project-path".
   static bool isProjectId(String projectId) {
     return isAppFile(projectId) && projectId.indexOf("/") < 0;
   }
 
-  /// Returns the project path part of a project id.
+  /// Returns the project path part of a project id. For example,
+  /// returns "project-path" from "app-id:project-path".
   static String getProjectIdProjectPath(String projectId) {
     assert(isProjectId(projectId));
 
@@ -331,7 +343,8 @@ class FileUuidHelpers {
     return projectId.substring(colon + 1);
   }
 
-  /// Returns the project id part of an application source file uuid.
+  /// Returns the project id part of an application source file uuid, i.e.
+  /// returns "app-id:project-path" from "app-id:project-path/dir/file.txt".
   static String getAppFileProjectId(String uuid) {
     assert(isAppFile(uuid));
 
@@ -342,7 +355,8 @@ class FileUuidHelpers {
     return uuid;
   }
 
-  /// Returns the project root path of an application source file uuid.
+  /// Returns the project root path of an application source file uuid, i.e.
+  /// returns "project-path" from "app-id:project-path/dir/file.txt".
   static String getAppFileProjectPath(String uuid) {
     assert(isAppFile(uuid));
 
@@ -350,7 +364,8 @@ class FileUuidHelpers {
   }
 
   /// Returns the path relative to the project root path for the given
-  /// application source file uuid.
+  /// application source file uuid, i.e. returns "dir/file.txt" from
+  /// "app-id:project-path/dir/file.txt".
   static String getAppFileRelativePath(String uuid) {
     assert(isAppFile(uuid));
 
@@ -361,7 +376,9 @@ class FileUuidHelpers {
     return "";
   }
 
-  /// Returns the full path (project path + relative path) of an application source file uuid.
+  /// Returns the full path (project path + relative path) of an
+  /// application source file uuid, i.e. returns "project-path/dir/file.txt"
+  /// from "app-id:project-path/dir/file.txt".
   static String getAppFileFullPath(String uuid) {
     assert(isAppFile(uuid));
 
@@ -370,7 +387,8 @@ class FileUuidHelpers {
     return uuid.substring(colon + 1);
   }
 
-  /// Returns the package name of a package source file uuid.
+  /// Returns the package name of a package source file uuid, i.e.
+  /// returns "package-name" from "package:package-name/dir/source.dart".
   static String getPackageFilePackageName(String uuid) {
     assert(isPackageFile(uuid));
 
@@ -384,7 +402,8 @@ class FileUuidHelpers {
     return uuid.substring(colon + 1);
   }
 
-  /// Returns the file name of a package source file uuid.
+  /// Returns the file name of a package source file uuid, i.e.
+  /// returns "dir/source.dart" from "package:package-name/dir/source.dart".
   static String getPackageFileRelativePath(String uuid) {
     assert(isPackageFile(uuid));
 
@@ -395,7 +414,9 @@ class FileUuidHelpers {
     return "";
   }
 
-  /// Returns the full path of a package source file uuid.
+  /// Returns the full path of a package source file uuid, i.e.
+  /// returns "package-name/dir/source.dart" from
+  /// "package:package-name/dir/source.dart".
   static String getPackageFileFullPath(String uuid) {
     assert(isPackageFile(uuid));
 
@@ -404,7 +425,9 @@ class FileUuidHelpers {
     return uuid.substring(colon + 1);
   }
 
-  /// Returns the file uuid from a project id and a file relative path.
+  /// Returns the file uuid from a project id and a file relative path, i.e.
+  /// returns "app-id:project-path/dir/file.txt" from "app-id:project-path"
+  /// and "dir/file.txt".
   static String buildAppFileUuid(String projectId, String relativePath) {
     assert(projectId != null);
     assert(projectId.isNotEmpty);
@@ -413,7 +436,9 @@ class FileUuidHelpers {
     return utils.pathconcat(projectId,  relativePath);
   }
 
-  /// Returns the full path of a file name from a project id and a relative path.
+  /// Returns the full path of a file name from a project id and a relative path, i.e.
+  /// returns "project-path/dir/file.txt" from "app-id:project-path"
+  /// and "dir/file.txt"..
   static String buildAppFileFullPath(String projectId, String relativePath) {
     assert(projectId != null);
     assert(projectId.isNotEmpty);
