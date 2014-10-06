@@ -18,9 +18,9 @@ abstract class DartServices {
   Future<Outline> getOutlineFor(String codeString);
 
   /**
-   * Create a new project context with the given [id].
+   * Create a new project context with the given [contextId].
    */
-  Future createContext(String id);
+  Future createContext(String contextId);
 
   /**
    * Adds/changes/removes files from the given context [contextId].
