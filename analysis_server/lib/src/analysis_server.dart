@@ -420,7 +420,7 @@ class AnalysisServer {
    * Handle a [request] that was read from the communication channel.
    */
   void handleRequest(Request request) {
-    runZoned(() {
+    //runZoned(() {
       int count = handlers.length;
       for (int i = 0; i < count; i++) {
         try {
@@ -448,7 +448,7 @@ class AnalysisServer {
         }
       }
       channel.sendResponse(new Response.unknownRequest(request));
-    }, onError: _sendServerErrorNotification);
+    //}, onError: _sendServerErrorNotification);
   }
 
   /**
