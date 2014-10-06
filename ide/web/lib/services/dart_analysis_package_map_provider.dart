@@ -23,11 +23,13 @@ class LocalPackageMapProvider implements PackageMapProvider {
    */
   @override
   PackageMapInfo computePackageMap(Folder folder) {
-    // TODO(rpaquay)
     AnalysisLogger.instance.debug("LocalPackageMapProvider.computePackageMap(\"${folder.path}\")");
     // TODO(rpaquay): Compute dependencies!
     if (folder is ProjectRootFolder) {
-      var map = folder.getPackageRootFolder().createPackageMap();
+      Map<String, List<Folder>> map = folder.getPackageRootFolder().createPackageMap();
+      map.keys.forEach((String packageName) {
+        AnalysisLogger.instance.debug(" map(${packageName}): ${map[packageName].length} elements.");
+      });
       return new PackageMapInfo(map, new Set<String>());
     }
     return new PackageMapInfo({}, new Set<String>());
