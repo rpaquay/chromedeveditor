@@ -103,6 +103,10 @@ class LocalServerCommunicationChannel implements ServerCommunicationChannel {
   @override
   void sendResponse(Response response) {
     AnalysisLogger.instance.debug("LocalServerCommunicationChannel.sendResponse(${response.id})");
+    if (response.error != null) {
+      AnalysisLogger.instance.debug(" error=${response.error.message})");
+      AnalysisLogger.instance.debug(" stack=${response.error.stackTrace})");
+    }
 
     // Complete and remove request corresponding the the response
     assert(_activeClientRequests[response.id] != null);
