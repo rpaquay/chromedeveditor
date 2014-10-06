@@ -21,6 +21,7 @@ import '../dart/sdk.dart' as sdk;
 import 'chrome_dart_sdk.dart';
 import 'dart_analyzer.dart' as dart_analyzer;
 import 'dart_analysis_channel.dart';
+import 'dart_analysis_common.dart';
 import 'dart_analysis_file_system.dart';
 import 'dart_analysis_package_map_provider.dart';
 import 'dart_analysis_project.dart';
@@ -35,16 +36,14 @@ import 'services_common.dart' as common;
 class AnalysisServerDartServices implements DartServices {
   final ChromeDartSdk dartSdk;
   final ContentsProvider _contentsProvider;
-  final LocalResourceProvider _resourceProvider;
-  final LocalServerCommunicationChannel _serverChannel;
+  final LocalResourceProvider _resourceProvider = new LocalResourceProvider();
+  final LocalServerCommunicationChannel _serverChannel = new LocalServerCommunicationChannel();
+  final RequestIdFactory _requestIdFactory = new _RequestIdFactory();
   final Map<String, ProjectContext> _contexts = {};
   AnalysisServer analysisServer;
 
   AnalysisServerDartServices(sdk.DartSdk sdk, this._contentsProvider)
-    : dartSdk = createSdk(sdk),
-      _resourceProvider = new LocalResourceProvider(),
-      _serverChannel = new LocalServerCommunicationChannel() {
-
+    : dartSdk = createSdk(sdk) {
     // TODO(rpaquay): Using an in-memory index is the easiest thing, but we would
     // ideally store the index to some persistent store to re-use accross sessions.
     Index index = memory_index.createLocalMemoryIndex();
@@ -90,11 +89,10 @@ class AnalysisServerDartServices implements DartServices {
     ProjectState state = new ProjectState(id);
     _contexts[id] = new ProjectContext(
         id,
-        analysisServer,
-        dartSdk,
         _contentsProvider,
         _resourceProvider,
-        _serverChannel.clientChannel);
+        _serverChannel.clientChannel,
+        _requestIdFactory);
     return new Future.value(null);
   }
 
@@ -129,5 +127,15 @@ class AnalysisServerDartServices implements DartServices {
   Future<common.Declaration> getDeclarationFor(String contextId, String fileUuid, int offset) {
     // TODO(rpaquay)
     return new Future.value(null);
+  }
+}
+
+class _RequestIdFactory implements RequestIdFactory {
+  int _requestId = 0;
+
+  @override
+  String nextRequestId() {
+    _requestId++;
+    return _requestId.toString();
   }
 }

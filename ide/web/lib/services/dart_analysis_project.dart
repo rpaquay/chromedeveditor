@@ -7,11 +7,10 @@ library spark.dart_analysis_project;
 import 'dart:async';
 
 import 'package:analyzer_clone/src/generated/engine.dart';
-import 'package:analysis_server/src/analysis_server.dart';
 import 'package:analysis_server/src/channel/channel.dart';
 import 'package:analysis_server/src/protocol.dart';
 
-import 'chrome_dart_sdk.dart';
+import 'dart_analysis_common.dart';
 import 'dart_analysis_file_system.dart';
 import 'dart_services.dart';
 import 'dart_source.dart';
@@ -23,24 +22,24 @@ import 'services_common.dart' as common;
 class ProjectContext {
   // The id for the project this context is associated with.
   final ProjectState _projectState;
-  final AnalysisServer _analysisServer;
-  final ChromeDartSdk _sdk;
   final ContentsProvider _contentsProvider;
   final LocalResourceProvider _resourceProvider;
   final ClientCommunicationChannel _clientChannel;
+  final RequestIdFactory _requestIdFactory;
   /// The root folder is lazily created on the first [processchanges]
   ProjectRootFolder _projectFolder;
   bool _contextCreated = false;
-  int _requestId = 0;
 
   ProjectContext(
       String projectId,
-      this._analysisServer,
-      this._sdk,
       this._contentsProvider,
       this._resourceProvider,
-      this._clientChannel)
+      this._clientChannel,
+      this._requestIdFactory)
       : this._projectState = new ProjectState(projectId);
+
+  String get rootPath =>
+      _projectState.rootPath;
 
   Future<AnalysisResultUuid> processChanges(
       List<String> addedUuids,
@@ -104,13 +103,17 @@ class ProjectContext {
   }
 
   String _createRequestId() {
-    _requestId++;
-    return _requestId.toString();
+    return _requestIdFactory.nextRequestId();
   }
 
   void dispose() {
+    if (_projectFolder == null) {
+      return;
+    }
+
     // TODO(rpaquay): Clear all pending requests, then notity analysis server
     _resourceProvider.removeProject(_projectFolder);
+    _projectFolder = null;
   }
 }
 
