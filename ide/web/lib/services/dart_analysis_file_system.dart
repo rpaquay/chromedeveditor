@@ -226,9 +226,11 @@ class ProjectFileSystemImpl implements ProjectFileSystem {
   }
 
   @override
-  Stream<WatchEvent> getFolderChanges(ProjectFolderBase folder) =>
+  Stream<WatchEvent> getFolderChanges(ProjectFolderBase folder) {
+    AnalysisLogger.instance.debug("ProjectFileSystemImpl.getFolderChanges(\"${folder.path}\")");
     // TODO(rpaquay): Keep track of instances and actually use them.
-    new StreamController<WatchEvent>.broadcast().stream;
+    return new StreamController<WatchEvent>.broadcast().stream;
+  }
 
   /**
    * If the path [path] is a relative path, convert it to an absolute path
@@ -494,9 +496,11 @@ class PackageFileSystemImpl implements PackageFileSystem {
   }
 
   @override
-  Stream<WatchEvent> getFolderChanges(PackageFolderBase folder) =>
+  Stream<WatchEvent> getFolderChanges(PackageFolderBase folder) {
+    AnalysisLogger.instance.debug("PackageFileSystemImpl.getFolderChanges(\"${folder.path}\")");
     // TODO(rpaquay): Keep track of instances and actually use them.
-    new StreamController<WatchEvent>.broadcast().stream;
+    return new StreamController<WatchEvent>.broadcast().stream;
+  }
 
   /**
    * If the path [path] is a relative path, convert it to an absolute path
